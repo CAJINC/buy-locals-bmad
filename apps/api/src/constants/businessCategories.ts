@@ -1,88 +1,133 @@
+// Main business categories - hierarchical structure
 export const BUSINESS_CATEGORIES = {
   RESTAURANTS: 'restaurants',
-  RETAIL: 'retail',
+  RETAIL: 'retail', 
   SERVICES: 'services',
   HEALTH: 'health',
-  ENTERTAINMENT: 'entertainment',
   AUTOMOTIVE: 'automotive',
   BEAUTY: 'beauty',
-  FITNESS: 'fitness',
-  EDUCATION: 'education',
+  ENTERTAINMENT: 'entertainment',
   PROFESSIONAL: 'professional',
-  HOME_GARDEN: 'home_garden',
-  TRAVEL: 'travel',
-  PETS: 'pets',
-  TECHNOLOGY: 'technology',
-  EVENTS: 'events'
+  HOME_SERVICES: 'home_services'
 } as const;
 
 export type BusinessCategory = typeof BUSINESS_CATEGORIES[keyof typeof BUSINESS_CATEGORIES];
 
-export const BUSINESS_CATEGORY_OPTIONS = [
-  { value: BUSINESS_CATEGORIES.RESTAURANTS, label: 'Restaurants & Food', subcategories: [
-    'fine_dining', 'casual_dining', 'fast_food', 'coffee_shops', 'bars_nightlife', 
-    'bakeries', 'food_trucks', 'catering', 'delivery_takeout'
-  ]},
-  { value: BUSINESS_CATEGORIES.RETAIL, label: 'Retail & Shopping', subcategories: [
-    'clothing', 'electronics', 'books_media', 'home_decor', 'jewelry', 
-    'sporting_goods', 'toys_games', 'groceries', 'pharmacy'
-  ]},
-  { value: BUSINESS_CATEGORIES.SERVICES, label: 'Professional Services', subcategories: [
-    'consulting', 'financial', 'legal', 'marketing', 'cleaning', 
-    'repair_maintenance', 'photography', 'event_planning', 'transportation'
-  ]},
-  { value: BUSINESS_CATEGORIES.HEALTH, label: 'Health & Medical', subcategories: [
-    'medical_practices', 'dental', 'vision_care', 'mental_health', 'alternative_medicine', 
-    'physical_therapy', 'veterinary', 'pharmacies', 'medical_equipment'
-  ]},
-  { value: BUSINESS_CATEGORIES.ENTERTAINMENT, label: 'Entertainment & Recreation', subcategories: [
-    'theaters', 'music_venues', 'sports_recreation', 'gaming', 'museums', 
-    'tours_attractions', 'nightlife', 'festivals', 'outdoor_activities'
-  ]},
-  { value: BUSINESS_CATEGORIES.AUTOMOTIVE, label: 'Automotive', subcategories: [
-    'auto_repair', 'car_dealers', 'gas_stations', 'car_wash', 'auto_parts', 
-    'towing', 'rental_cars', 'parking', 'motorcycle'
-  ]},
-  { value: BUSINESS_CATEGORIES.BEAUTY, label: 'Beauty & Personal Care', subcategories: [
-    'hair_salons', 'nail_salons', 'spas', 'massage', 'skincare', 
-    'barbershops', 'cosmetics', 'wellness', 'tattoo_piercing'
-  ]},
-  { value: BUSINESS_CATEGORIES.FITNESS, label: 'Fitness & Sports', subcategories: [
-    'gyms', 'yoga_studios', 'martial_arts', 'dance_studios', 'personal_training', 
-    'sports_clubs', 'outdoor_fitness', 'nutrition', 'sports_equipment'
-  ]},
-  { value: BUSINESS_CATEGORIES.EDUCATION, label: 'Education & Learning', subcategories: [
-    'schools', 'tutoring', 'music_lessons', 'art_classes', 'language_learning', 
-    'test_prep', 'vocational', 'childcare', 'libraries'
-  ]},
-  { value: BUSINESS_CATEGORIES.PROFESSIONAL, label: 'Professional Services', subcategories: [
-    'accounting', 'real_estate', 'insurance', 'banking', 'investment', 
-    'business_consulting', 'hr_services', 'it_services', 'coworking'
-  ]},
-  { value: BUSINESS_CATEGORIES.HOME_GARDEN, label: 'Home & Garden', subcategories: [
-    'contractors', 'landscaping', 'home_improvement', 'interior_design', 'pest_control', 
-    'appliance_repair', 'plumbing', 'electrical', 'roofing'
-  ]},
-  { value: BUSINESS_CATEGORIES.TRAVEL, label: 'Travel & Hospitality', subcategories: [
-    'hotels', 'bed_breakfast', 'travel_agencies', 'tour_operators', 'vacation_rentals', 
-    'transportation', 'travel_insurance', 'luggage_travel_gear'
-  ]},
-  { value: BUSINESS_CATEGORIES.PETS, label: 'Pets & Animals', subcategories: [
-    'veterinary', 'pet_stores', 'grooming', 'boarding', 'training', 
-    'pet_sitting', 'animal_rescue', 'pet_supplies', 'exotic_pets'
-  ]},
-  { value: BUSINESS_CATEGORIES.TECHNOLOGY, label: 'Technology', subcategories: [
-    'computer_repair', 'software_development', 'web_design', 'it_support', 'electronics_repair', 
-    'phone_repair', 'data_recovery', 'cybersecurity', 'telecommunications'
-  ]},
-  { value: BUSINESS_CATEGORIES.EVENTS, label: 'Events & Celebrations', subcategories: [
-    'wedding_planning', 'party_planning', 'catering', 'event_venues', 'entertainment', 
-    'photography', 'florists', 'decorations', 'rental_equipment'
-  ]}
+// Subcategory definitions for hierarchical taxonomy
+export const SUBCATEGORIES = {
+  restaurants: ['fast_food', 'fine_dining', 'casual_dining', 'cafes', 'bars'],
+  retail: ['clothing', 'electronics', 'books', 'grocery', 'pharmacy'],
+  services: ['cleaning', 'repair', 'consulting', 'legal', 'financial'],
+  health: ['medical', 'dental', 'veterinary', 'fitness', 'wellness'],
+  automotive: ['repair', 'sales', 'car_wash', 'gas_station'],
+  beauty: ['hair_salon', 'spa', 'nail_salon', 'barbershop'],
+  entertainment: ['movie_theater', 'arcade', 'bowling', 'live_music'],
+  professional: ['accounting', 'real_estate', 'insurance', 'marketing'],
+  home_services: ['plumbing', 'electrical', 'landscaping', 'cleaning']
+} as const;
+
+export type SubcategoryType = {
+  [K in BusinessCategory]: typeof SUBCATEGORIES[K][number];
+};
+
+// Enhanced category taxonomy with icons, display metadata, and popularity tracking
+export interface CategoryMetadata {
+  value: BusinessCategory;
+  label: string;
+  icon: string;
+  description: string;
+  subcategories: string[];
+  popularity: number; // 1-100 popularity score
+  averageRating?: number;
+  businessCount?: number;
+}
+
+export const BUSINESS_CATEGORY_OPTIONS: CategoryMetadata[] = [
+  {
+    value: BUSINESS_CATEGORIES.RESTAURANTS,
+    label: 'Restaurants & Food',
+    icon: '🍽️',
+    description: 'Dining, takeout, and food services',
+    subcategories: ['fast_food', 'fine_dining', 'casual_dining', 'cafes', 'bars'],
+    popularity: 95
+  },
+  {
+    value: BUSINESS_CATEGORIES.RETAIL,
+    label: 'Retail & Shopping',
+    icon: '🛍️',
+    description: 'Stores and retail outlets',
+    subcategories: ['clothing', 'electronics', 'books', 'grocery', 'pharmacy'],
+    popularity: 88
+  },
+  {
+    value: BUSINESS_CATEGORIES.SERVICES,
+    label: 'Professional Services',
+    icon: '💼',
+    description: 'Business and professional services',
+    subcategories: ['cleaning', 'repair', 'consulting', 'legal', 'financial'],
+    popularity: 82
+  },
+  {
+    value: BUSINESS_CATEGORIES.HEALTH,
+    label: 'Health & Medical',
+    icon: '🏥',
+    description: 'Healthcare and wellness services',
+    subcategories: ['medical', 'dental', 'veterinary', 'fitness', 'wellness'],
+    popularity: 91
+  },
+  {
+    value: BUSINESS_CATEGORIES.AUTOMOTIVE,
+    label: 'Automotive',
+    icon: '🚗',
+    description: 'Car services and automotive businesses',
+    subcategories: ['repair', 'sales', 'car_wash', 'gas_station'],
+    popularity: 75
+  },
+  {
+    value: BUSINESS_CATEGORIES.BEAUTY,
+    label: 'Beauty & Personal Care',
+    icon: '💄',
+    description: 'Beauty and personal care services',
+    subcategories: ['hair_salon', 'spa', 'nail_salon', 'barbershop'],
+    popularity: 79
+  },
+  {
+    value: BUSINESS_CATEGORIES.ENTERTAINMENT,
+    label: 'Entertainment & Recreation',
+    icon: '🎭',
+    description: 'Entertainment venues and activities',
+    subcategories: ['movie_theater', 'arcade', 'bowling', 'live_music'],
+    popularity: 73
+  },
+  {
+    value: BUSINESS_CATEGORIES.PROFESSIONAL,
+    label: 'Professional Services',
+    icon: '📊',
+    description: 'Financial and professional services',
+    subcategories: ['accounting', 'real_estate', 'insurance', 'marketing'],
+    popularity: 68
+  },
+  {
+    value: BUSINESS_CATEGORIES.HOME_SERVICES,
+    label: 'Home Services',
+    icon: '🏠',
+    description: 'Home maintenance and improvement',
+    subcategories: ['plumbing', 'electrical', 'landscaping', 'cleaning'],
+    popularity: 85
+  }
 ];
 
+// Category utility functions with enhanced metadata support
 export const getAllCategories = (): string[] => {
   return Object.values(BUSINESS_CATEGORIES);
+};
+
+export const getAllSubcategories = (): string[] => {
+  return Object.values(SUBCATEGORIES).flat();
+};
+
+export const getCategoryMetadata = (category: string): CategoryMetadata | undefined => {
+  return BUSINESS_CATEGORY_OPTIONS.find(opt => opt.value === category);
 };
 
 export const getCategoryLabel = (category: string): string => {
@@ -90,11 +135,66 @@ export const getCategoryLabel = (category: string): string => {
   return option?.label || category;
 };
 
+export const getCategoryIcon = (category: string): string => {
+  const option = BUSINESS_CATEGORY_OPTIONS.find(opt => opt.value === category);
+  return option?.icon || '📍';
+};
+
+export const getCategoryDescription = (category: string): string => {
+  const option = BUSINESS_CATEGORY_OPTIONS.find(opt => opt.value === category);
+  return option?.description || '';
+};
+
 export const getCategorySubcategories = (category: string): string[] => {
   const option = BUSINESS_CATEGORY_OPTIONS.find(opt => opt.value === category);
   return option?.subcategories || [];
 };
 
+export const getCategoryPopularity = (category: string): number => {
+  const option = BUSINESS_CATEGORY_OPTIONS.find(opt => opt.value === category);
+  return option?.popularity || 50;
+};
+
 export const isValidCategory = (category: string): boolean => {
   return getAllCategories().includes(category);
+};
+
+export const isValidSubcategory = (subcategory: string): boolean => {
+  return getAllSubcategories().includes(subcategory);
+};
+
+// Get parent category for a subcategory
+export const getParentCategory = (subcategory: string): BusinessCategory | undefined => {
+  for (const [category, subcats] of Object.entries(SUBCATEGORIES)) {
+    if (subcats.includes(subcategory as any)) {
+      return category as BusinessCategory;
+    }
+  }
+  return undefined;
+};
+
+// Get categories sorted by popularity
+export const getCategoriesByPopularity = (): CategoryMetadata[] => {
+  return [...BUSINESS_CATEGORY_OPTIONS].sort((a, b) => b.popularity - a.popularity);
+};
+
+// Category filtering utilities for OR logic support
+export interface CategoryFilter {
+  categories: string[];
+  includeSubcategories?: boolean;
+}
+
+export const expandCategoryFilter = (filter: CategoryFilter): string[] => {
+  const expanded = new Set<string>();
+  
+  filter.categories.forEach(category => {
+    expanded.add(category);
+    
+    if (filter.includeSubcategories) {
+      const subcategories = getCategorySubcategories(category);
+      subcategories.forEach(sub => expanded.add(sub));
+    }
+  });
+  
+  return Array.from(expanded);
 };

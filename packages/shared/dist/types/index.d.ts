@@ -1,7 +1,7 @@
 export * from './user';
 export * from './business';
 export * from './booking';
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
     success: boolean;
     data?: T;
     message?: string;
@@ -18,7 +18,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 export interface ApiError {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
     statusCode: number;
 }
 export interface AuthTokens {

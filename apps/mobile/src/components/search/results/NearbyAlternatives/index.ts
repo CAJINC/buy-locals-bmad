@@ -1,0 +1,1 @@
+export { NearbyAlternatives } from './NearbyAlternatives';

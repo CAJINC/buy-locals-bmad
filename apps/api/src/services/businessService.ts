@@ -9,6 +9,7 @@ import {
   CreateBusinessRequest, 
   UpdateBusinessRequest 
 } from '../types/Business.js';
+import { AdvancedFilters } from './filterStateService.js';
 import { createError } from '../middleware/errorHandler.js';
 
 export class BusinessService {
@@ -326,6 +327,42 @@ export class BusinessService {
       throw createError(
         `A business with the name "${name}" already exists within 5 miles of this location. Please choose a different name or add a distinguishing detail.`,
         409
+      );
+    }
+  }
+
+  /**
+   * Advanced business search with complex filter combinations
+   */
+  async searchBusinessesAdvanced(filters: AdvancedFilters): Promise<{
+    businesses: Business[];
+    totalCount: number;
+    appliedFilters: string[];
+    metadata: {
+      searchTime: number;
+      filterValidation: any;
+      queryComplexity: 'simple' | 'moderate' | 'complex';
+      cacheHit: boolean;
+    };
+  }> {
+    try {
+      // Execute advanced search using repository
+      const result = await this.businessRepository.searchBusinessesAdvanced(filters);
+      
+      // Transform businesses to response DTOs
+      const transformedBusinesses = result.businesses.map(business => this.transformToResponseDto(business));
+      
+      return {
+        businesses: transformedBusinesses,
+        totalCount: result.totalCount,
+        appliedFilters: result.appliedFilters,
+        metadata: result.metadata,
+      };
+      
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Advanced search failed',
+        500
       );
     }
   }

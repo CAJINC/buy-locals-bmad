@@ -1,11 +1,12 @@
-import { locationService, LocationCoordinates, LocationPermissionStatus } from '../../services/locationService';
+import { locationService, LocationCoordinates, LocationPermissionStatus, LocationAccuracyAssessment, LocationCacheEntry, BackgroundLocationOptions } from '../../services/locationService';
 
 // Mock react-native modules
 jest.mock('react-native', () => ({
-  Platform: { OS: 'ios' },
+  Platform: { OS: 'ios', Version: 30 },
   PermissionsAndroid: {
     PERMISSIONS: {
-      ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION'
+      ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
+      ACCESS_BACKGROUND_LOCATION: 'android.permission.ACCESS_BACKGROUND_LOCATION'
     },
     RESULTS: {
       GRANTED: 'granted',
@@ -13,10 +14,15 @@ jest.mock('react-native', () => ({
       NEVER_ASK_AGAIN: 'never_ask_again'
     },
     request: jest.fn()
+  },
+  AppState: {
+    currentState: 'active',
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn()
   }
 }));
 
-jest.mock('@react-native-community/geolocation', () => ({
+jest.mock('react-native-geolocation-service', () => ({
   getCurrentPosition: jest.fn(),
   watchPosition: jest.fn(),
   clearWatch: jest.fn()
@@ -25,7 +31,8 @@ jest.mock('@react-native-community/geolocation', () => ({
 jest.mock('react-native-permissions', () => ({
   PERMISSIONS: {
     IOS: {
-      LOCATION_WHEN_IN_USE: 'ios.permission.LOCATION_WHEN_IN_USE'
+      LOCATION_WHEN_IN_USE: 'ios.permission.LOCATION_WHEN_IN_USE',
+      LOCATION_ALWAYS: 'ios.permission.LOCATION_ALWAYS'
     }
   },
   RESULTS: {
@@ -38,7 +45,13 @@ jest.mock('react-native-permissions', () => ({
   request: jest.fn()
 }));
 
-import Geolocation from '@react-native-community/geolocation';
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(() => Promise.resolve(null)),
+  setItem: jest.fn(() => Promise.resolve()),
+  removeItem: jest.fn(() => Promise.resolve()),
+}));
+
+import Geolocation from 'react-native-geolocation-service';
 import { PERMISSIONS, RESULTS, check, request } from 'react-native-permissions';
 
 describe('LocationService', () => {
@@ -448,11 +461,265 @@ describe('LocationService', () => {
     });
   });
 
+  describe('Background Location Updates', () => {
+    test('should start background location updates successfully', async () => {
+      (check as jest.Mock).mockResolvedValue(RESULTS.GRANTED);
+      (request as jest.Mock).mockResolvedValue(RESULTS.GRANTED);
+      (Geolocation.watchPosition as jest.Mock).mockReturnValue(456);
+
+      const result = await locationService.startBackgroundLocationUpdates();
+
+      expect(result).toBe(true);
+      expect(locationService['isBackgroundWatching']).toBe(true);
+      expect(locationService['backgroundWatchId']).toBe(456);
+    });
+
+    test('should fail to start background updates without permission', async () => {
+      (check as jest.Mock).mockResolvedValue(RESULTS.DENIED);
+      (request as jest.Mock).mockResolvedValue(RESULTS.DENIED);
+
+      const result = await locationService.startBackgroundLocationUpdates();
+
+      expect(result).toBe(false);
+      expect(locationService['isBackgroundWatching']).toBe(false);
+    });
+
+    test('should stop background location updates', () => {
+      locationService['backgroundWatchId'] = 456;
+      locationService['isBackgroundWatching'] = true;
+
+      locationService.stopBackgroundLocationUpdates();
+
+      expect(Geolocation.clearWatch).toHaveBeenCalledWith(456);
+      expect(locationService['backgroundWatchId']).toBeNull();
+      expect(locationService['isBackgroundWatching']).toBe(false);
+    });
+
+    test('should handle background location callbacks', () => {
+      const mockLocation: LocationCoordinates = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        accuracy: 15,
+        timestamp: Date.now()
+      };
+
+      const backgroundCallback = jest.fn();
+      const unsubscribe = locationService.subscribeToBackgroundLocationUpdates(backgroundCallback);
+
+      // Simulate background location update
+      locationService['backgroundLocationCallbacks'].forEach(callback => callback(mockLocation));
+
+      expect(backgroundCallback).toHaveBeenCalledWith(mockLocation);
+
+      unsubscribe();
+      expect(locationService['backgroundLocationCallbacks']).toHaveLength(0);
+    });
+  });
+
+  describe('Enhanced Accuracy Assessment', () => {
+    test('should provide comprehensive accuracy assessment', async () => {
+      const highAccuracyLocation: LocationCoordinates = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        accuracy: 5,
+        timestamp: Date.now()
+      };
+
+      (Geolocation.getCurrentPosition as jest.Mock).mockImplementation((success) => {
+        success({
+          coords: {
+            latitude: highAccuracyLocation.latitude,
+            longitude: highAccuracyLocation.longitude,
+            accuracy: highAccuracyLocation.accuracy
+          },
+          timestamp: highAccuracyLocation.timestamp
+        });
+      });
+
+      const result = await locationService.getValidatedCurrentLocation();
+
+      expect(result.quality).toBe('excellent');
+      expect(result.validation.isValid).toBe(true);
+      expect(result.location.accuracy).toBe(5);
+    });
+
+    test('should assess location with confidence levels', async () => {
+      const fairAccuracyLocation: LocationCoordinates = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        accuracy: 75,
+        timestamp: Date.now()
+      };
+
+      (Geolocation.getCurrentPosition as jest.Mock).mockImplementation((success) => {
+        success({
+          coords: {
+            latitude: fairAccuracyLocation.latitude,
+            longitude: fairAccuracyLocation.longitude,
+            accuracy: fairAccuracyLocation.accuracy
+          },
+          timestamp: fairAccuracyLocation.timestamp
+        });
+      });
+
+      const result = await locationService.getValidatedCurrentLocation();
+      const assessment = locationService['assessLocationAccuracy'](fairAccuracyLocation);
+
+      expect(assessment.quality).toBe('fair');
+      expect(assessment.accuracyIndicator).toBe('medium');
+      expect(assessment.confidenceLevel).toBe(70);
+    });
+  });
+
+  describe('Location Caching', () => {
+    test('should cache location with reliability scoring', async () => {
+      const location: LocationCoordinates = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        accuracy: 10,
+        timestamp: Date.now()
+      };
+
+      await locationService['storeLastKnownLocation'](location, 'gps');
+
+      expect(locationService['locationCache'].size).toBeGreaterThan(0);
+      expect(locationService['currentLocation']).toEqual(location);
+    });
+
+    test('should get best cached location near coordinates', () => {
+      // Set up cache with multiple entries
+      const nearLocation: LocationCoordinates = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        accuracy: 15,
+        timestamp: Date.now()
+      };
+
+      const cacheEntry: LocationCacheEntry = {
+        location: nearLocation,
+        cacheTimestamp: Date.now(),
+        source: 'gps',
+        reliability: 85
+      };
+
+      locationService['locationCache'].set('40.713,-74.006', cacheEntry);
+
+      const result = locationService.getBestCachedLocation(nearLocation);
+
+      expect(result).toBeDefined();
+      expect(result?.reliability).toBe(85);
+      expect(result?.source).toBe('gps');
+    });
+
+    test('should provide cache statistics', () => {
+      const stats = locationService.getCacheStatistics();
+
+      expect(stats).toHaveProperty('cacheSize');
+      expect(stats).toHaveProperty('averageReliability');
+      expect(stats).toHaveProperty('sourceCounts');
+    });
+
+    test('should clear location cache', async () => {
+      await locationService.clearLocationCache();
+
+      expect(locationService['locationCache'].size).toBe(0);
+    });
+  });
+
+  describe('Comprehensive Location Status', () => {
+    test('should provide detailed location status', async () => {
+      (check as jest.Mock).mockResolvedValue(RESULTS.GRANTED);
+
+      const status = await locationService.getLocationStatus();
+
+      expect(status).toHaveProperty('hasLocation');
+      expect(status).toHaveProperty('permission');
+      expect(status).toHaveProperty('accuracy');
+      expect(status).toHaveProperty('cacheStatus');
+      expect(status).toHaveProperty('isWatching');
+      expect(status).toHaveProperty('isBackgroundWatching');
+    });
+
+    test('should check comprehensive location availability', async () => {
+      (check as jest.Mock).mockResolvedValue(RESULTS.GRANTED);
+      (request as jest.Mock).mockResolvedValue(RESULTS.GRANTED);
+
+      const availability = await locationService.isLocationAvailable();
+
+      expect(availability).toHaveProperty('available');
+      expect(availability).toHaveProperty('permission');
+      expect(availability).toHaveProperty('gpsEnabled');
+      expect(availability).toHaveProperty('networkLocationEnabled');
+    });
+  });
+
+  describe('Background Permission Handling', () => {
+    test('should request background location permission on iOS', async () => {
+      (check as jest.Mock).mockResolvedValue(RESULTS.DENIED);
+      (request as jest.Mock).mockResolvedValue(RESULTS.GRANTED);
+
+      const result = await locationService.requestBackgroundLocationPermission();
+
+      expect(result.backgroundLocationGranted).toBe(true);
+      expect(result.alwaysLocationGranted).toBe(true);
+      expect(result.status).toBe('granted');
+    });
+
+    test('should handle blocked background permission', async () => {
+      (check as jest.Mock).mockResolvedValue(RESULTS.BLOCKED);
+
+      const result = await locationService.requestBackgroundLocationPermission();
+
+      expect(result.backgroundLocationGranted).toBe(false);
+      expect(result.status).toBe('blocked');
+      expect(result.canAskAgain).toBe(false);
+    });
+  });
+
+  describe('Enhanced Error Handling', () => {
+    test('should handle location watch errors gracefully', () => {
+      let watchCallback: ((position: any, error?: any) => void) | null = null;
+      (Geolocation.watchPosition as jest.Mock).mockImplementation((success, error) => {
+        watchCallback = error;
+        return 123;
+      });
+
+      locationService.startLocationWatch();
+
+      // Simulate location error
+      if (watchCallback) {
+        watchCallback(null, { code: 2, message: 'Position unavailable' });
+      }
+
+      // Should continue watching for recoverable errors
+      expect(locationService['isWatching']).toBe(true);
+    });
+
+    test('should stop watching on permission denied error', () => {
+      let watchCallback: ((position: any, error?: any) => void) | null = null;
+      (Geolocation.watchPosition as jest.Mock).mockImplementation((success, error) => {
+        watchCallback = error;
+        return 123;
+      });
+
+      locationService.startLocationWatch();
+
+      // Simulate permission denied error
+      if (watchCallback) {
+        watchCallback(null, { code: 1, message: 'Permission denied' });
+      }
+
+      expect(locationService['isWatching']).toBe(false);
+    });
+  });
+
   describe('Cleanup and Resource Management', () => {
-    test('should cleanup resources properly', () => {
+    test('should cleanup resources properly', async () => {
       // Set up some state
       locationService['watchId'] = 123;
+      locationService['backgroundWatchId'] = 456;
       locationService['isWatching'] = true;
+      locationService['isBackgroundWatching'] = true;
       locationService['currentLocation'] = {
         latitude: 40.7128,
         longitude: -74.0060,
@@ -460,14 +727,31 @@ describe('LocationService', () => {
         timestamp: Date.now()
       };
       locationService['locationUpdateCallbacks'] = [jest.fn()];
+      locationService['backgroundLocationCallbacks'] = [jest.fn()];
+      locationService['locationCache'].set('test', {
+        location: {
+          latitude: 40.7128,
+          longitude: -74.0060,
+          accuracy: 10,
+          timestamp: Date.now()
+        },
+        cacheTimestamp: Date.now(),
+        source: 'gps',
+        reliability: 85
+      });
 
       locationService.cleanup();
 
       expect(Geolocation.clearWatch).toHaveBeenCalledWith(123);
+      expect(Geolocation.clearWatch).toHaveBeenCalledWith(456);
       expect(locationService['watchId']).toBeNull();
+      expect(locationService['backgroundWatchId']).toBeNull();
       expect(locationService['isWatching']).toBe(false);
+      expect(locationService['isBackgroundWatching']).toBe(false);
       expect(locationService['currentLocation']).toBeNull();
       expect(locationService['locationUpdateCallbacks']).toHaveLength(0);
+      expect(locationService['backgroundLocationCallbacks']).toHaveLength(0);
+      expect(locationService['locationCache'].size).toBe(0);
     });
   });
 });

@@ -1,0 +1,1 @@
+**REQUIRED** remember to follow bmad method for this repo   and quinon you need to guide in this process only follow bmad religiously

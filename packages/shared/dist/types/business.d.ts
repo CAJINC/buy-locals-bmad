@@ -20,6 +20,11 @@ export interface BusinessContact {
     phone?: string;
     email?: string;
     website?: string;
+    socialMedia?: {
+        platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'youtube' | 'tiktok';
+        url: string;
+        handle?: string;
+    }[];
 }
 export interface BusinessService {
     name: string;
@@ -45,6 +50,11 @@ export interface Business {
     }[];
     services: BusinessService[];
     is_active: boolean;
+    rating?: number;
+    reviewCount?: number;
+    isVerified?: boolean;
+    verificationLevel?: 'basic' | 'premium' | 'enterprise';
+    verificationDate?: Date;
     created_at: Date;
     updated_at: Date;
 }

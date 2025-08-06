@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { redisClient } from '../config/redis.js';
+import { redisClient, redisMetrics } from '../config/redis.js';
+import { performanceMonitoringService } from '../services/performanceMonitoringService.js';
+import { logger } from '../utils/logger.js';
 
 interface PerformanceMetrics {
   endpoint: string;
@@ -49,17 +51,55 @@ export class PerformanceMonitor {
           location: PerformanceMonitor.extractLocationFromRequest(req),
         };
 
-        // Log slow queries
+        // Enhanced performance tracking
+        const isSearchOperation = req.path.includes('/search') || req.path.includes('/location');
+        const success = res.statusCode >= 200 && res.statusCode < 400;
+        
+        // Record in performance monitoring service
+        performanceMonitoringService.recordMetric({
+          timestamp: endTime,
+          component: isSearchOperation ? 'search' : 'api',
+          operation: `${req.method} ${req.path}`,
+          executionTime: duration,
+          success,
+          cacheHit: (res as any).cacheHit === true,
+          dataSize: JSON.stringify((res as any).responseBody || {}).length,
+          userId: (req as any).user?.id,
+          sessionId: req.sessionID,
+          userAgent: req.get('User-Agent'),
+          region: PerformanceMonitor.extractRegionFromRequest(req),
+        });
+        
+        // Track specific search performance
+        if (isSearchOperation && success && (res as any).responseBody?.businesses) {
+          performanceMonitoringService.recordSearchPerformance(
+            duration,
+            (res as any).cacheHit === true,
+            (res as any).responseBody.businesses.length || 0,
+            (req as any).user?.id,
+            req.query
+          );
+        }
+        
+        // Log slow queries with enhanced details
         if (duration > PerformanceMonitor.SLOW_QUERY_THRESHOLD) {
-          console.warn('Slow query detected:', {
+          logger.warn('Slow query detected', {
             ...metrics,
             threshold: PerformanceMonitor.SLOW_QUERY_THRESHOLD,
+            requestId: (req as any).requestId,
+            isSearchOperation,
+            performanceScore: PerformanceMonitor.calculatePerformanceScore(duration, metrics.cacheHit || false),
           });
         }
+        
+        // Add performance headers
+        res.setHeader('X-Response-Time', duration.toString());
+        res.setHeader('X-Cache-Hit', (metrics.cacheHit || false).toString());
+        res.setHeader('X-Performance-Score', PerformanceMonitor.calculatePerformanceScore(duration, metrics.cacheHit || false).toString());
 
         // Store metrics asynchronously
         PerformanceMonitor.recordMetrics(metrics).catch(error => {
-          console.error('Failed to record performance metrics:', error);
+          logger.error('Failed to record performance metrics', { error: error.message, requestId: (req as any).requestId });
         });
 
         // Call original end method
@@ -184,6 +224,59 @@ export class PerformanceMonitor {
     }
 
     return undefined;
+  }
+  
+  /**
+   * Extract region from request headers and coordinates
+   */
+  private static extractRegionFromRequest(req: Request): string {
+    // Extract region from various sources
+    const cloudflareCountry = req.headers['cf-ipcountry'] as string;
+    const awsRegion = req.headers['cloudfront-viewer-country'] as string;
+    const geoIP = req.headers['x-geo-country'] as string;
+    
+    // Use query parameters for location-based requests
+    if (req.query.lat && req.query.lng) {
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Simple US region detection
+        if (lat >= 25 && lat <= 49 && lng >= -125 && lng <= -66) {
+          if (lat >= 40 && lng >= -125 && lng <= -95) return 'us-west';
+          if (lat >= 40 && lng >= -95 && lng <= -66) return 'us-east';
+          if (lat < 40 && lng >= -125 && lng <= -95) return 'us-southwest';
+          if (lat < 40 && lng >= -95 && lng <= -66) return 'us-southeast';
+        }
+        return 'international';
+      }
+    }
+    
+    // Fallback to header-based detection
+    const country = cloudflareCountry || awsRegion || geoIP;
+    if (country === 'US') {
+      return 'us-unknown';
+    } else if (country) {
+      return country.toLowerCase();
+    }
+    
+    return 'unknown';
+  }
+  
+  /**
+   * Calculate performance score (0-100)
+   */
+  private static calculatePerformanceScore(responseTime: number, cacheHit: boolean): number {
+    let score = 100;
+    
+    // Deduct points for slow response
+    if (responseTime > 100) score -= Math.min(50, (responseTime - 100) / 10);
+    
+    // Bonus points for cache hits
+    if (cacheHit) score += 10;
+    
+    // Ensure score is between 0-100
+    return Math.max(0, Math.min(100, Math.round(score)));
   }
 
   /**
@@ -311,25 +404,39 @@ export class PerformanceMonitor {
 
       // Check overall performance
       if (stats.overallStats.averageResponseTime > this.SLOW_QUERY_THRESHOLD) {
-        console.warn('System performance alert:', {
+        logger.warn('System performance alert', {
           averageResponseTime: stats.overallStats.averageResponseTime,
           threshold: this.SLOW_QUERY_THRESHOLD,
           errorRate: stats.overallStats.errorRate,
           cacheHitRate: stats.overallStats.cacheHitRate,
+          component: 'performance-monitor',
+          alertType: 'system-degradation',
         });
       }
 
       // Check endpoint-specific performance
       stats.endpointStats.forEach(endpoint => {
         if (endpoint.averageResponseTime > this.SLOW_QUERY_THRESHOLD) {
-          console.warn('Endpoint performance alert:', {
+          logger.warn('Endpoint performance alert', {
             endpoint: `${endpoint.method} ${endpoint.endpoint}`,
             averageResponseTime: endpoint.averageResponseTime,
             requestCount: endpoint.requestCount,
             errorRate: endpoint.errorRate,
+            component: 'performance-monitor',
+            alertType: 'endpoint-degradation',
           });
         }
       });
+      
+      // Check cache hit rate
+      if (stats.overallStats.cacheHitRate < 0.8) {
+        logger.warn('Low cache hit rate alert', {
+          cacheHitRate: stats.overallStats.cacheHitRate,
+          threshold: 0.8,
+          component: 'performance-monitor',
+          alertType: 'cache-degradation',
+        });
+      }
     } catch (error) {
       console.error('Performance alert check error:', error);
     }

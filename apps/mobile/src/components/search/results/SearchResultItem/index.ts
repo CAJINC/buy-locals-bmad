@@ -1,0 +1,1 @@
+export { SearchResultItem as SearchResultItemComponent } from './SearchResultItem';
