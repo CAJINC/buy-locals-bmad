@@ -1,5 +1,14 @@
 import { Business } from 'packages/shared/src/types/business';
 
+// Business Hours Status Types
+export type BusinessStatusType = 'open' | 'closed' | 'unknown';
+
+export interface HoursValidationError {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
 export interface BusinessProfileProps {
   business?: Business;
   showActions?: boolean;
@@ -31,6 +40,58 @@ export interface BusinessHoursDisplayProps {
   hours: Business['hours'];
   compact?: boolean;
   showCurrentStatus?: boolean;
+}
+
+// Enhanced Business Hours Types
+export interface EnhancedBusinessHours {
+  // Regular weekly hours
+  [day: string]: {
+    open?: string;
+    close?: string;
+    closed?: boolean;
+    isClosed?: boolean;
+  };
+  // Special hours for holidays/events
+  specialHours?: {
+    [date: string]: {
+      open: string;
+      close: string;
+      isClosed: boolean;
+      reason: string; // "Holiday", "Special Event", etc.
+    };
+  };
+  timezone?: string; // Business timezone
+  temporaryClosures?: {
+    startDate: string;
+    endDate: string;
+    reason: string;
+  }[];
+}
+
+export interface TimeZoneInfo {
+  name: string;
+  abbreviation: string;
+  offset: number; // minutes from UTC
+}
+
+export interface BusinessStatus {
+  isOpen: boolean;
+  status: 'open' | 'closed' | 'unknown';
+  reason?: string;
+  nextChange: Date | null;
+}
+
+export interface EnhancedBusinessHoursDisplayProps {
+  hours: Business['hours'] | EnhancedBusinessHours;
+  compact?: boolean;
+  showCurrentStatus?: boolean;
+  showCountdown?: boolean;
+  showTimezone?: boolean;
+  userTimezone?: string;
+  expandable?: boolean;
+  showSpecialHours?: boolean;
+  onStatusChange?: (status: BusinessStatus) => void;
+  refreshInterval?: number; // milliseconds
 }
 
 export interface BusinessPhotoGalleryProps {
