@@ -1,15 +1,15 @@
 import { db } from '../utils/database';
 import { logger } from '../utils/logger';
 import type { 
-  ServiceTypeConfig, 
+  BookingRules, 
   CreateServiceTypeInput, 
-  UpdateServiceTypeInput,
-  ServiceTypeTemplate,
-  SERVICE_TYPE_TEMPLATES,
   FormFieldConfig,
-  BookingRules,
   PricingModel,
-  ServiceRequirements
+  SERVICE_TYPE_TEMPLATES,
+  ServiceRequirements,
+  ServiceTypeConfig,
+  ServiceTypeTemplate,
+  UpdateServiceTypeInput
 } from '../types/ServiceType';
 
 export class ServiceTypeService {

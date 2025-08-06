@@ -35,7 +35,7 @@ export const BiometricPrompt: React.FC<BiometricPromptProps> = ({
   onFallback,
   title = 'Authenticate Payment',
   subtitle = 'Verify your identity to proceed',
-  description = 'Use your biometric authentication to confirm this payment',
+  description: _description = 'Use your biometric authentication to confirm this payment',
   theme = 'light',
   biometricType = Platform.OS === 'ios' ? 'FaceID' : 'Fingerprint',
 }) => {
@@ -46,7 +46,7 @@ export const BiometricPrompt: React.FC<BiometricPromptProps> = ({
   useEffect(() => {
     // Auto-start biometric authentication when component mounts
     handleBiometricAuth();
-  }, []);
+  }, [handleBiometricAuth]);
 
   // Get biometric icon based on type
   const getBiometricIcon = useCallback(() => {
@@ -212,7 +212,7 @@ export const BiometricPrompt: React.FC<BiometricPromptProps> = ({
 
       {/* Attempt Counter */}
       {authAttempts > 0 && (
-        <Text style={[styles.biometricDescription, { marginTop: 8, fontWeight: '600' }, theme === 'dark' && styles.biometricDescriptionDark]}>
+        <Text style={[styles.biometricDescription, styles.attemptCounter, theme === 'dark' && styles.biometricDescriptionDark]}>
           Attempt {authAttempts} of {maxAttempts}
         </Text>
       )}
@@ -233,7 +233,7 @@ export const BiometricPrompt: React.FC<BiometricPromptProps> = ({
         )}
 
         {isAuthenticating && (
-          <View style={[styles.biometricButton, styles.biometricPrimaryButton, { opacity: 0.7 }]}>
+          <View style={[styles.biometricButton, styles.biometricPrimaryButton, styles.authenticatingButton]}>
             <Text style={[styles.biometricButtonText, styles.biometricPrimaryButtonText]}>
               Authenticating...
             </Text>
@@ -268,7 +268,7 @@ export const BiometricPrompt: React.FC<BiometricPromptProps> = ({
       </View>
 
       {/* Security Notice */}
-      <View style={[styles.securityNotice, { marginTop: 16, borderTopWidth: 0 }]}>
+      <View style={[styles.securityNotice, styles.securityNoticeSpacing]}>
         <Text style={styles.securityIcon}>🔒</Text>
         <Text style={[styles.securityText, theme === 'dark' && styles.securityTextDark]}>
           Your biometric data never leaves your device

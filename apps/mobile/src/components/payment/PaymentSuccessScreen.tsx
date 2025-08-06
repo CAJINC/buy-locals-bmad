@@ -292,7 +292,7 @@ export const PaymentSuccessScreen: React.FC<PaymentSuccessScreenProps> = ({
       {/* Next Steps */}
       <View style={[styles.nextStepsContainer, theme === 'dark' && styles.nextStepsContainerDark]}>
         <Text style={[styles.nextStepsTitle, theme === 'dark' && styles.nextStepsTitleDark]}>
-          What's Next?
+          What&apos;s Next?
         </Text>
         
         <View style={styles.nextStepItem}>
@@ -314,7 +314,7 @@ export const PaymentSuccessScreen: React.FC<PaymentSuccessScreenProps> = ({
         <View style={styles.nextStepItem}>
           <Text style={styles.nextStepIcon}>⭐</Text>
           <Text style={[styles.nextStepText, theme === 'dark' && styles.nextStepTextDark]}>
-            Don't forget to leave a review after your experience
+            Don&apos;t forget to leave a review after your experience
           </Text>
         </View>
       </View>

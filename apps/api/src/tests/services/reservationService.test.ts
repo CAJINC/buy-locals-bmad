@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { ReservationService } from '../../services/reservationService';
 import { inventoryService } from '../../services/inventoryService';
 import { reservationExpirationService } from '../../services/reservationExpirationService';
@@ -272,7 +272,7 @@ describe('ReservationService', () => {
         reservations: expect.arrayContaining([
           expect.objectContaining({
             id: 'booking-1',
-            businessId: businessId,
+            businessId,
             customerName: 'John Doe',
             type: 'service',
             status: 'pending'

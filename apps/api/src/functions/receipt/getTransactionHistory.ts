@@ -1,9 +1,17 @@
-import { APIGatewayProxyHandler, APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { success, badRequest, unauthorized, internalServerError } from '../../utils/lambdaResponseUtils.js';
+import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { pool } from '../../config/database.js';
 import { auditLogger, sanitizeInput } from '../../middleware/security.js';
+
+interface TransactionItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
 
 interface TransactionHistoryRequest {
   businessId?: string;
@@ -89,7 +97,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
+    sanitizeInput(event);
     
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
@@ -121,18 +129,18 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       minAmount: queryParams.minAmount ? parseFloat(queryParams.minAmount) * 100 : undefined, // Convert to cents
       maxAmount: queryParams.maxAmount ? parseFloat(queryParams.maxAmount) * 100 : undefined, // Convert to cents
       searchQuery: queryParams.searchQuery,
-      sortBy: (queryParams.sortBy as any) || 'date',
-      sortOrder: (queryParams.sortOrder as any) || 'desc',
+      sortBy: (queryParams.sortBy as TransactionHistoryRequest['sortBy']) || 'date',
+      sortOrder: (queryParams.sortOrder as TransactionHistoryRequest['sortOrder']) || 'desc',
       page: parseInt(queryParams.page || '1'),
       limit: Math.min(parseInt(queryParams.limit || '20'), 100) // Max 100 per page
     };
 
     // Validate pagination parameters
-    if (request.page! < 1) {
+    if ((request.page || 1) < 1) {
       return badRequest('Page must be greater than 0');
     }
 
-    if (request.limit! < 1 || request.limit! > 100) {
+    if ((request.limit || 20) < 1 || (request.limit || 20) > 100) {
       return badRequest('Limit must be between 1 and 100');
     }
 
@@ -172,7 +180,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     // Build query conditions
     const conditions: string[] = [];
-    const queryValues: any[] = [];
+    const queryValues: unknown[] = [];
     let paramIndex = 1;
 
     // Authorization filters
@@ -264,9 +272,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const totalCount = parseInt(countResult.rows[0].total_count);
 
     // Calculate pagination
-    const offset = (request.page! - 1) * request.limit!;
-    const totalPages = Math.ceil(totalCount / request.limit!);
-    const hasMore = request.page! < totalPages;
+    const offset = ((request.page || 1) - 1) * (request.limit || 20);
+    const totalPages = Math.ceil(totalCount / (request.limit || 20));
+    const hasMore = (request.page || 1) < totalPages;
 
     // Get transactions with pagination
     const transactionsQuery = `
@@ -310,7 +318,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     // Get transaction items for each transaction
     const transactionIds = transactionsResult.rows.map(row => row.id);
-    let transactionItems: Record<string, any[]> = {};
+    const transactionItems: Record<string, TransactionItem[]> = {};
 
     if (transactionIds.length > 0) {
       const itemsQuery = `
@@ -442,8 +450,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const response: TransactionHistoryResponse = {
       transactions,
       pagination: {
-        page: request.page!,
-        limit: request.limit!,
+        page: request.page || 1,
+        limit: request.limit || 20,
         totalCount,
         totalPages,
         hasMore

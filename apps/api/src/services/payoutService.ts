@@ -3,20 +3,67 @@ import { v4 as uuidv4 } from 'uuid';
 import { stripe } from '../config/stripe.js';
 import { logger } from '../utils/logger.js';
 import {
+  BusinessBalance,
+  PaymentAuditLog,
+  PaymentOperationType,
   PayoutRequest,
   PayoutResult,
   PayoutSchedule,
-  BusinessBalance,
-  PayoutServiceInterface,
-  PaymentAuditLog,
-  PaymentOperationType
+  PayoutServiceInterface
 } from '../types/Payment.js';
+
+interface PayoutReport {
+  businessId: string;
+  reportPeriod: {
+    startDate: string;
+    endDate: string;
+  };
+  summary: {
+    totalPayouts: number;
+    totalAmount: number;
+    successfulPayouts: number;
+    failedPayouts: number;
+    pendingPayouts: number;
+    averagePayoutAmount: number;
+  };
+  currentBalance: BusinessBalance;
+  payoutSchedule?: PayoutSchedule;
+  payouts: PayoutSummary[];
+  failureAnalysis: FailureAnalysis;
+  generatedAt: string;
+  correlationId: string;
+}
+
+interface PayoutSummary {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  arrivalDate: Date | null;
+  createdAt: Date | null;
+  method: string;
+  type: string;
+}
+
+interface FailureAnalysis {
+  totalFailures: number;
+  failureRate: number;
+  failureReasons: Record<string, number>;
+  recommendations: string[];
+}
+
+interface FailureRecord {
+  attempt: number;
+  lastError: string;
+  nextRetry: Date;
+}
+
 import {
-  createPaymentErrorFromStripe,
   BasePaymentError,
-  PaymentValidationError,
+  InsufficientFundsError,
   PaymentProcessingError,
-  InsufficientFundsError
+  PaymentValidationError,
+  createPaymentErrorFromStripe
 } from '../errors/PaymentErrors.js';
 
 /**
@@ -33,7 +80,7 @@ import {
 export class PayoutService implements PayoutServiceInterface {
   private readonly payoutSchedules: Map<string, PayoutSchedule> = new Map();
   private readonly businessBalances: Map<string, BusinessBalance> = new Map();
-  private readonly failedPayouts: Map<string, { attempt: number; lastError: string; nextRetry: Date }> = new Map();
+  private readonly failedPayouts: Map<string, FailureRecord> = new Map();
 
   constructor() {
     this.initializeScheduledPayouts();
@@ -178,7 +225,7 @@ export class PayoutService implements PayoutServiceInterface {
       throw new PaymentProcessingError(
         'Failed to retrieve business balance',
         true,
-        error as any
+        error as Error
       );
     }
   }
@@ -213,7 +260,7 @@ export class PayoutService implements PayoutServiceInterface {
       throw new PaymentProcessingError(
         'Failed to update payout schedule',
         false,
-        error as any
+        error as Error
       );
     }
   }
@@ -281,7 +328,7 @@ export class PayoutService implements PayoutServiceInterface {
       throw new PaymentProcessingError(
         'Failed to handle payout failure',
         true,
-        error as any
+        error as Error
       );
     }
   }
@@ -289,7 +336,7 @@ export class PayoutService implements PayoutServiceInterface {
   /**
    * Generate payout report for a business
    */
-  async generatePayoutReport(businessId: string, startDate: Date, endDate: Date): Promise<any> {
+  async generatePayoutReport(businessId: string, startDate: Date, endDate: Date): Promise<PayoutReport> {
     const correlationId = uuidv4();
 
     try {
@@ -346,7 +393,7 @@ export class PayoutService implements PayoutServiceInterface {
       throw new PaymentProcessingError(
         'Failed to generate payout report',
         true,
-        error as any
+        error as Error
       );
     }
   }
@@ -587,7 +634,7 @@ export class PayoutService implements PayoutServiceInterface {
     }
   }
 
-  private sanitizePayoutForReport(payout: any): any {
+  private sanitizePayoutForReport(payout: Stripe.Payout): PayoutSummary {
     return {
       id: payout.id,
       amount: payout.amount,
@@ -600,7 +647,7 @@ export class PayoutService implements PayoutServiceInterface {
     };
   }
 
-  private generateFailureAnalysis(payouts: any[]): any {
+  private generateFailureAnalysis(payouts: Stripe.Payout[]): FailureAnalysis {
     const failedPayouts = payouts.filter(p => p.status === 'failed');
     
     const failureReasons: Record<string, number> = {};
@@ -642,7 +689,7 @@ export class PayoutService implements PayoutServiceInterface {
     businessId?: string,
     correlationId?: string,
     success?: boolean,
-    error?: any
+    error?: unknown
   ): Promise<void> {
     try {
       const auditLog: PaymentAuditLog = {
@@ -677,7 +724,7 @@ export class PayoutService implements PayoutServiceInterface {
     });
   }
 
-  private async escalatePayoutFailure(payoutId: string, failureRecord: any): Promise<void> {
+  private async escalatePayoutFailure(payoutId: string, failureRecord: FailureRecord): Promise<void> {
     // In a real implementation, create support ticket or alert
     logger.error('Payout failure escalated for manual intervention', {
       payoutId,
@@ -699,7 +746,7 @@ export class PayoutService implements PayoutServiceInterface {
     logger.info('Saved business balance to database', { businessId: balance.businessId, balance });
   }
 
-  private async getPayoutsForPeriod(businessId: string, startDate: Date, endDate: Date): Promise<any[]> {
+  private async getPayoutsForPeriod(_businessId: string, _startDate: Date, _endDate: Date): Promise<Stripe.Payout[]> {
     // Mock payout data - in real implementation, query from database/Stripe
     return [
       {
@@ -712,6 +759,6 @@ export class PayoutService implements PayoutServiceInterface {
         method: 'standard',
         type: 'bank_account'
       }
-    ];
+    ] as Stripe.Payout[];
   }
 }

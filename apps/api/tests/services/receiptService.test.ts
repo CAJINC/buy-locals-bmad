@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { ReceiptService, ReceiptData, ReceiptGenerationOptions, EmailReceiptOptions } from '../../src/services/receiptService.js';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { EmailReceiptOptions, ReceiptData, ReceiptGenerationOptions, ReceiptService } from '../../src/services/receiptService.js';
 import PaymentTestData from '../utils/paymentTestData.js';
 import { readFileSync } from 'fs';
 

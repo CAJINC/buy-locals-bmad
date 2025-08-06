@@ -3,16 +3,16 @@ import { logger } from '../utils/logger';
 import { notificationService } from './notificationService';
 import { availabilityService } from './availabilityService';
 import type {
-  ModificationPolicy,
-  ModificationRequest,
-  ModificationImpact,
   AutoApprovalResult,
   ConflictCheck,
-  ModificationHistory,
   CreateModificationRequestData,
-  ReviewModificationRequestData,
+  ModificationChangeType,
+  ModificationHistory,
+  ModificationImpact,
+  ModificationPolicy,
+  ModificationRequest,
   ModificationRequestResponse,
-  ModificationChangeType
+  ReviewModificationRequestData
 } from '../types/ReservationModification';
 import type { Reservation } from '../types/Reservation';
 

@@ -1,5 +1,4 @@
 import Stripe from 'stripe';
-import { config } from './environment';
 
 // Stripe Configuration Interface
 interface StripeConfig {
@@ -138,7 +137,7 @@ export const getStripePublishableKey = (): string => stripeConfig.publishableKey
 export const getStripeApiVersion = (): string => stripeConfig.apiVersion;
 
 // Security utilities for logging (never log sensitive data)
-export const sanitizeStripeError = (error: any): Record<string, any> => {
+export const sanitizeStripeError = (error: unknown): Record<string, unknown> => {
   const sanitized = {
     type: error.type || 'unknown',
     code: error.code || 'unknown',

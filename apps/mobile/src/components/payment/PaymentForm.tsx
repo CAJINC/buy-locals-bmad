@@ -18,6 +18,14 @@ import {
 import { usePayment } from '../../hooks/usePayment';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { PaymentSummary } from './PaymentSummary';
+
+interface PaymentResult {
+  success: boolean;
+  paymentIntentId?: string;
+  status?: string;
+  clientSecret?: string;
+  metadata?: Record<string, unknown>;
+}
 import { styles } from './styles';
 import { logger } from '../../utils/logger';
 
@@ -29,7 +37,7 @@ export interface PaymentFormProps {
   serviceId?: string;
   description?: string;
   escrowReleaseDate?: string;
-  onSuccess: (paymentResult: any) => void;
+  onSuccess: (paymentResult: PaymentResult) => void;
   onError: (error: string) => void;
   onCancel: () => void;
   theme?: 'light' | 'dark';
@@ -88,7 +96,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   // Initialize payment sheet when component mounts
   useEffect(() => {
     initializePaymentSheet();
-  }, [amount, currency, businessId]);
+  }, [initializePaymentSheet, amount, currency, businessId]);
 
   const initializePaymentSheet = useCallback(async () => {
     try {
@@ -183,16 +191,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     }));
   }, []);
 
-  // Handle billing details change
-  const handleBillingDetailsChange = useCallback((field: keyof PaymentFormData['billingDetails'], value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      billingDetails: {
-        ...prev.billingDetails,
-        [field]: value,
-      },
-    }));
-  }, []);
 
   // Handle card details change
   const handleCardDetailsChange = useCallback((details: CardFieldInput.Details) => {
@@ -390,15 +388,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
                 cvc: 'CVC',
                 postalCode: 'ZIP',
               }}
-              cardStyle={{
-                backgroundColor: theme === 'dark' ? '#374151' : '#FFFFFF',
-                textColor: theme === 'dark' ? '#F9FAFB' : '#111827',
-                borderColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
-                borderWidth: 1,
-                borderRadius: 8,
-                fontSize: 16,
-                placeholderColor: theme === 'dark' ? '#6B7280' : '#9CA3AF',
-              }}
+              cardStyle={theme === 'dark' ? styles.cardFieldDark : styles.cardFieldLight}
               style={styles.cardField}
               onCardChange={handleCardDetailsChange}
               accessibilityLabel="Card input field"

@@ -1,6 +1,6 @@
-import { APIGatewayProxyHandler, APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { success, badRequest, unauthorized, internalServerError } from '../../utils/lambdaResponseUtils.js';
+import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { PayoutService } from '../../services/payoutService.js';
 import { pool } from '../../config/database.js';
@@ -253,7 +253,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: requestBody.businessId,
         stripeAccountId: business.stripe_account_id,
         amount: totalAvailable,
-        currency: currency,
+        currency,
         description: requestBody.description || `Payout for ${transactionCount} transactions`,
         metadata: {
           ...requestBody.metadata,

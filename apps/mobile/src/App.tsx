@@ -2,12 +2,17 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { NativeBaseProvider } from 'native-base';
 import { AppNavigator } from './navigation/AppNavigator';
+import { StripeProvider } from './providers/StripeProvider';
 import { navigationRef } from './services/navigationService';
 import { linking, linkingService } from './services/linkingService';
+import { initializePaymentDeepLinking } from './hooks/usePaymentDeepLinking';
 import * as Linking from 'expo-linking';
 
 const App: React.FC = () => {
   useEffect(() => {
+    // Initialize payment deep linking
+    const cleanupPaymentDeepLinking = initializePaymentDeepLinking();
+
     // Handle deep links when app is already running
     const subscription = Linking.addEventListener('url', ({ url }) => {
       console.log('Deep link received:', url);
@@ -40,18 +45,21 @@ const App: React.FC = () => {
 
     return () => {
       subscription?.remove();
+      cleanupPaymentDeepLinking();
     };
   }, []);
 
   return (
     <NativeBaseProvider>
-      <NavigationContainer 
-        ref={navigationRef}
-        linking={linking}
-        fallback={null}
-      >
-        <AppNavigator />
-      </NavigationContainer>
+      <StripeProvider>
+        <NavigationContainer 
+          ref={navigationRef}
+          linking={linking}
+          fallback={null}
+        >
+          <AppNavigator />
+        </NavigationContainer>
+      </StripeProvider>
     </NativeBaseProvider>
   );
 };

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { PayoutService } from '../../src/services/payoutService.js';
-import { PayoutRequest, PayoutResult, BusinessBalance } from '../../src/types/Payment.js';
-import { PaymentValidationError, InsufficientFundsError } from '../../src/errors/PaymentErrors.js';
+import { BusinessBalance, PayoutRequest, PayoutResult } from '../../src/types/Payment.js';
+import { InsufficientFundsError, PaymentValidationError } from '../../src/errors/PaymentErrors.js';
 import PaymentTestData from '../utils/paymentTestData.js';
 import StripeTestHelpers from '../utils/stripeTestHelpers.js';
 

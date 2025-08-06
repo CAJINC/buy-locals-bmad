@@ -8,9 +8,38 @@ import {
   TaxServiceInterface
 } from '../types/Payment.js';
 import { 
-  PaymentValidationError,
-  PaymentProcessingError 
+  PaymentProcessingError,
+  PaymentValidationError 
 } from '../errors/PaymentErrors.js';
+
+interface TaxReport {
+  businessId: string;
+  reportPeriod: {
+    startDate: string;
+    endDate: string;
+  };
+  summary: {
+    totalTransactions: number;
+    totalRevenue: number;
+    totalTaxCollected: number;
+    taxByJurisdiction: Record<string, number>;
+  };
+  transactions: TaxableTransaction[];
+  exemptions: TaxExemption[];
+  generatedAt: string;
+  correlationId: string;
+}
+
+interface TaxableTransaction {
+  id: string;
+  businessId: string;
+  amount: number;
+  taxAmount: number;
+  jurisdiction: string;
+  date: Date;
+  exemptionApplied: boolean;
+  exemptionType?: string;
+}
 
 /**
  * Comprehensive Tax Calculation Service for Buy Locals Platform
@@ -105,7 +134,7 @@ export class TaxService implements TaxServiceInterface {
       throw new PaymentProcessingError(
         'Failed to calculate tax',
         true,
-        error as any
+        error as Error
       );
     }
   }
@@ -152,7 +181,7 @@ export class TaxService implements TaxServiceInterface {
   /**
    * Create tax report for a business
    */
-  async createTaxReport(businessId: string, startDate: Date, endDate: Date): Promise<any> {
+  async createTaxReport(businessId: string, startDate: Date, endDate: Date): Promise<TaxReport> {
     const correlationId = uuidv4();
 
     try {
@@ -203,7 +232,7 @@ export class TaxService implements TaxServiceInterface {
       throw new PaymentProcessingError(
         'Failed to generate tax report',
         true,
-        error as any
+        error as Error
       );
     }
   }
@@ -243,7 +272,7 @@ export class TaxService implements TaxServiceInterface {
       throw new PaymentProcessingError(
         'Failed to update tax exemption',
         false,
-        error as any
+        error as Error
       );
     }
   }
@@ -278,8 +307,8 @@ export class TaxService implements TaxServiceInterface {
     const businessState = request.businessLocation.state.toUpperCase();
     const customerState = request.customerLocation?.state?.toUpperCase();
 
-    // States with origin-based sales tax (business location)
-    const originBasedStates = ['CA', 'AZ', 'IL', 'MS', 'MO', 'NM', 'OH', 'PA', 'TN', 'TX', 'UT', 'VA'];
+    // States with origin-based sales tax (business location) - for future use
+    // const originBasedStates = ['CA', 'AZ', 'IL', 'MS', 'MO', 'NM', 'OH', 'PA', 'TN', 'TX', 'UT', 'VA'];
     
     // States with destination-based sales tax (customer location)
     const destinationBasedStates = ['AL', 'AR', 'CO', 'CT', 'DC', 'FL', 'GA', 'HI', 'ID', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'NE', 'NV', 'NJ', 'NY', 'NC', 'ND', 'OK', 'RI', 'SC', 'SD', 'VT', 'WA', 'WV', 'WI', 'WY'];
@@ -468,12 +497,12 @@ export class TaxService implements TaxServiceInterface {
   }
 
   // Mock database operations (replace with actual database implementation)
-  private async getTaxableTransactions(businessId: string, startDate: Date, endDate: Date): Promise<any[]> {
+  private async getTaxableTransactions(_businessId: string, _startDate: Date, _endDate: Date): Promise<TaxableTransaction[]> {
     // Mock transactions for report generation
     return [
       {
         id: 'txn-1',
-        businessId,
+        businessId: _businessId,
         amount: 10000, // $100.00
         taxAmount: 825, // $8.25
         jurisdiction: 'CA',
@@ -482,7 +511,7 @@ export class TaxService implements TaxServiceInterface {
       },
       {
         id: 'txn-2',
-        businessId,
+        businessId: _businessId,
         amount: 5000, // $50.00
         taxAmount: 0, // Tax exempt
         jurisdiction: 'CA',
@@ -493,7 +522,7 @@ export class TaxService implements TaxServiceInterface {
     ];
   }
 
-  private groupTaxByJurisdiction(transactions: any[]): Record<string, number> {
+  private groupTaxByJurisdiction(transactions: TaxableTransaction[]): Record<string, number> {
     const grouped: Record<string, number> = {};
 
     transactions.forEach(txn => {

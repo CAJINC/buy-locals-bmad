@@ -3,11 +3,11 @@ import { logger } from '../utils/logger';
 import { inventoryService } from './inventoryService';
 import { reservationExpirationService } from './reservationExpirationService';
 import type {
-  Reservation,
   CreateReservationInput,
+  InventoryHold,
+  Reservation,
   ReservationFilters,
-  ReservationItem,
-  InventoryHold
+  ReservationItem
 } from '../types/Reservation';
 
 export class ReservationService {

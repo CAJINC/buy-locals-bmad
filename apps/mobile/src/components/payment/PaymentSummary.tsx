@@ -50,16 +50,6 @@ export const PaymentSummary: React.FC<PaymentSummaryProps> = ({
     }).format(value);
   };
 
-  // Get currency symbol
-  const getCurrencySymbol = (): string => {
-    const symbols: Record<string, string> = {
-      USD: '$',
-      CAD: 'C$',
-      EUR: '€',
-      GBP: '£',
-    };
-    return symbols[currency.toUpperCase()] || currency.toUpperCase();
-  };
 
   return (
     <View style={[styles.summaryContainer, theme === 'dark' && styles.summaryContainerDark]}>

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { inventoryService, InventoryService } from '../../services/inventoryService';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { InventoryService, inventoryService } from '../../services/inventoryService';
 import { db } from '../../utils/database';
 import type { ReservationItem } from '../../types/Reservation';
 

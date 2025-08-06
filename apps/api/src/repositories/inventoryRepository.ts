@@ -1,6 +1,6 @@
 import { db } from '../utils/database';
 import { logger } from '../utils/logger';
-import type { ProductInventory, InventoryHold } from '../types/Reservation';
+import type { InventoryHold, ProductInventory } from '../types/Reservation';
 
 export class InventoryRepository {
   /**

@@ -3,27 +3,25 @@ import { v4 as uuidv4 } from 'uuid';
 import { stripe } from '../config/stripe.js';
 import { logger } from '../utils/logger.js';
 import { 
-  PaymentIntentParams,
-  PaymentResult,
   CaptureResult,
-  RefundResult,
-  PaymentServiceInterface,
-  EscrowTransaction,
-  PaymentAuditLog,
-  PaymentOperationType,
-  IdempotencyKeyRecord,
   CircuitBreakerState,
+  EscrowTransaction,
+  IdempotencyKeyRecord,
+  PaymentAuditLog,
+  PaymentIntentParams,
+  PaymentOperationType,
+  PaymentResult,
+  PaymentServiceInterface,
+  RefundResult,
   RetryConfig
 } from '../types/Payment.js';
 import { User } from '../types/User.js';
 import { 
-  createPaymentErrorFromStripe,
   BasePaymentError,
-  PaymentValidationError,
+  EscrowError,
   PaymentProcessingError,
-  PaymentIdempotencyError,
-  InsufficientFundsError,
-  EscrowError
+  PaymentValidationError,
+  createPaymentErrorFromStripe
 } from '../errors/PaymentErrors.js';
 
 /**
@@ -234,7 +232,7 @@ export class PaymentService implements PaymentServiceInterface {
 
       const captureAmount = amountToCapture || escrowTransaction.amount;
       
-      const paymentIntent = await this.executeWithCircuitBreaker(
+      await this.executeWithCircuitBreaker(
         'stripe_api',
         () => stripe.paymentIntents.capture(paymentIntentId, {
           amount_to_capture: captureAmount
@@ -293,7 +291,7 @@ export class PaymentService implements PaymentServiceInterface {
   /**
    * Cancel a payment intent
    */
-  async cancelPayment(paymentIntentId: string, reason?: string): Promise<PaymentResult> {
+  async cancelPayment(paymentIntentId: string, _reason?: string): Promise<PaymentResult> {
     const correlationId = uuidv4();
 
     try {
@@ -363,7 +361,7 @@ export class PaymentService implements PaymentServiceInterface {
         () => stripe.refunds.create({
           payment_intent: transactionId,
           amount: refundAmount,
-          reason: (reason as any) || 'requested_by_customer',
+          reason: (reason as Stripe.RefundCreateParams.Reason) || 'requested_by_customer',
           metadata: {
             ...metadata,
             correlationId,
@@ -452,7 +450,6 @@ export class PaymentService implements PaymentServiceInterface {
    * Update a Stripe customer
    */
   async updateCustomer(customerId: string, updates: Partial<User>): Promise<void> {
-    const correlationId = uuidv4();
 
     try {
       const updateParams: Stripe.CustomerUpdateParams = {};
@@ -658,7 +655,7 @@ export class PaymentService implements PaymentServiceInterface {
     return Math.round(amount * (feePercentage / 100));
   }
 
-  private generateIdempotencyKey(operation: PaymentOperationType, params: any): string {
+  private generateIdempotencyKey(operation: PaymentOperationType, params: unknown): string {
     // Create a deterministic key based on operation and critical parameters
     const keyData = {
       operation,
@@ -669,7 +666,7 @@ export class PaymentService implements PaymentServiceInterface {
     return Buffer.from(JSON.stringify(keyData)).toString('base64').slice(0, 64);
   }
 
-  private getIdempotentResult(key: string): any | null {
+  private getIdempotentResult(key: string): unknown | null {
     const cached = this.idempotencyCache.get(key);
     if (cached && cached.expiresAt > new Date()) {
       return cached.result;
@@ -677,7 +674,7 @@ export class PaymentService implements PaymentServiceInterface {
     return null;
   }
 
-  private cacheIdempotentResult(key: string, operation: PaymentOperationType, result: any): void {
+  private cacheIdempotentResult(key: string, operation: PaymentOperationType, result: unknown): void {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24); // 24-hour expiry
 
@@ -764,10 +761,10 @@ export class PaymentService implements PaymentServiceInterface {
       }
     }
 
-    throw lastError!;
+    throw lastError;
   }
 
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     if (error instanceof BasePaymentError) {
       return error.retryable;
     }
@@ -789,7 +786,11 @@ export class PaymentService implements PaymentServiceInterface {
         totalRequests: 0
       });
     }
-    return this.circuitBreakers.get(service)!;
+    const breaker = this.circuitBreakers.get(service);
+    if (!breaker) {
+      throw new PaymentProcessingError(`Circuit breaker not found for service: ${service}`, false);
+    }
+    return breaker;
   }
 
   private initializeCircuitBreakers(): void {
@@ -821,7 +822,7 @@ export class PaymentService implements PaymentServiceInterface {
     businessId?: string,
     correlationId?: string,
     success?: boolean,
-    error?: any
+    error?: unknown
   ): Promise<void> {
     try {
       const auditLog: PaymentAuditLog = {

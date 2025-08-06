@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { PaymentService } from '../../src/services/paymentService.js';
 import PaymentTestData from '../utils/paymentTestData.js';
 import StripeTestHelpers from '../utils/stripeTestHelpers.js';

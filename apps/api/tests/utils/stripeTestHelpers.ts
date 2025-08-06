@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { jest } from '@jest/globals';
-import { PaymentIntentParams, PaymentResult, RefundResult, CaptureResult } from '../../src/types/Payment.js';
+import { CaptureResult, PaymentIntentParams, PaymentResult, RefundResult } from '../../src/types/Payment.js';
 
 /**
  * Stripe Test Helpers

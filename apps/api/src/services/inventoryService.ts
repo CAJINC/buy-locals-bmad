@@ -1,10 +1,10 @@
 import { pool } from '../config/database';
 import { logger } from '../utils/logger';
 import type {
-  ProductInventory,
-  ReservationItem,
+  CreateReservationInput,
   InventoryHold,
-  CreateReservationInput
+  ProductInventory,
+  ReservationItem
 } from '../types/Reservation';
 
 export class InventoryService {

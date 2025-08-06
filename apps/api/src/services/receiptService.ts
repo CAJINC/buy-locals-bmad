@@ -872,14 +872,14 @@ export class ReceiptService {
     const subtotal = receiptData.amount - receiptData.taxAmount - receiptData.platformFee;
 
     let receipt = '';
-    receipt += line + '\n';
-    receipt += this.centerText(receiptData.business.name.toUpperCase(), width) + '\n';
-    receipt += this.centerText(`${t.receipt} #${receiptData.receiptNumber}`, width) + '\n';
-    receipt += line + '\n';
+    receipt += `${line  }\n`;
+    receipt += `${this.centerText(receiptData.business.name.toUpperCase(), width)  }\n`;
+    receipt += `${this.centerText(`${t.receipt} #${receiptData.receiptNumber}`, width)  }\n`;
+    receipt += `${line  }\n`;
     receipt += `${t.date}: ${receiptData.createdAt.toLocaleDateString()}\n`;
     receipt += `${t.transactionId}: ${receiptData.transactionId}\n`;
     receipt += `${t.status}: ${t[receiptData.status]}\n`;
-    receipt += line + '\n';
+    receipt += `${line  }\n`;
     
     // Business info
     receipt += `${t.business}:\n`;
@@ -895,26 +895,26 @@ export class ReceiptService {
     
     // Items
     receipt += `${t.items}:\n`;
-    receipt += '-'.repeat(width) + '\n';
+    receipt += `${'-'.repeat(width)  }\n`;
     
     receiptData.items.forEach(item => {
       receipt += `${item.name}\n`;
       receipt += `  ${item.quantity} x $${(item.unitPrice / 100).toFixed(2)} = $${(item.totalPrice / 100).toFixed(2)}\n`;
     });
     
-    receipt += '-'.repeat(width) + '\n';
+    receipt += `${'-'.repeat(width)  }\n`;
     
     // Totals
-    receipt += this.rightAlign(`${t.subtotal}: $${(subtotal / 100).toFixed(2)}`, width) + '\n';
+    receipt += `${this.rightAlign(`${t.subtotal}: $${(subtotal / 100).toFixed(2)}`, width)  }\n`;
     
     if (options.includeTaxBreakdown) {
-      receipt += this.rightAlign(`${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%): $${(receiptData.taxAmount / 100).toFixed(2)}`, width) + '\n';
+      receipt += `${this.rightAlign(`${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%): $${(receiptData.taxAmount / 100).toFixed(2)}`, width)  }\n`;
     }
     
-    receipt += this.rightAlign(`${t.platformFee}: $${(receiptData.platformFee / 100).toFixed(2)}`, width) + '\n';
-    receipt += '='.repeat(width) + '\n';
-    receipt += this.rightAlign(`${t.total}: $${(receiptData.amount / 100).toFixed(2)}`, width) + '\n';
-    receipt += '='.repeat(width) + '\n';
+    receipt += `${this.rightAlign(`${t.platformFee}: $${(receiptData.platformFee / 100).toFixed(2)}`, width)  }\n`;
+    receipt += `${'='.repeat(width)  }\n`;
+    receipt += `${this.rightAlign(`${t.total}: $${(receiptData.amount / 100).toFixed(2)}`, width)  }\n`;
+    receipt += `${'='.repeat(width)  }\n`;
     
     // Refund info
     if (options.includeRefundInfo && receiptData.refundAmount) {
@@ -924,8 +924,8 @@ export class ReceiptService {
     }
     
     // Footer
-    receipt += '\n' + this.centerText(t.thankYou, width) + '\n';
-    receipt += this.centerText('support@buylocals.com', width) + '\n';
+    receipt += `\n${  this.centerText(t.thankYou, width)  }\n`;
+    receipt += `${this.centerText('support@buylocals.com', width)  }\n`;
     
     if (signature) {
       receipt += '\n' + `Digital Signature: ${signature}\n`;

@@ -21,6 +21,12 @@ export const config = {
   cognitoUserPoolId: process.env.COGNITO_USER_POOL_ID || '',
   cognitoClientId: process.env.COGNITO_CLIENT_ID || '',
   cognitoClientSecret: process.env.COGNITO_CLIENT_SECRET || '',
+  
+  // Stripe Configuration
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
+  stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  stripeApiVersion: process.env.STRIPE_API_VERSION || '2024-12-18.acacia',
 } as const;
 
 // Validate required environment variables

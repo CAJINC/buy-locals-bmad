@@ -2,7 +2,7 @@ import { APIGatewayProxyHandler } from 'aws-lambda';
 import { createResponse, parseJSON } from '../../utils/apiResponse';
 import { validateRequestBody } from '../../utils/validation';
 import { logger } from '../../utils/logger';
-import { reservationExpirationService, ExpirationPolicy } from '../../services/reservationExpirationService';
+import { ExpirationPolicy, reservationExpirationService } from '../../services/reservationExpirationService';
 import { z } from 'zod';
 
 const createExpirationPolicySchema = z.object({
@@ -90,7 +90,7 @@ async function handleGetExpirationPolicies(
     // Get all policies for the business
     const policies = await reservationExpirationService.getBusinessExpirationPolicies(businessId);
     
-    let responseData: any = {
+    const responseData: any = {
       success: true,
       data: {
         policies

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { PaymentService } from '../../src/services/paymentService.js';
-import { PaymentValidationError, PaymentProcessingError } from '../../src/errors/PaymentErrors.js';
+import { PaymentProcessingError, PaymentValidationError } from '../../src/errors/PaymentErrors.js';
 import PaymentTestData from '../utils/paymentTestData.js';
 import StripeTestHelpers from '../utils/stripeTestHelpers.js';
 import TestDatabase from '../utils/testDatabase.js';

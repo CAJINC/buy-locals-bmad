@@ -35,6 +35,7 @@
     "redis": "^4.6.10",
     "serverless-http": "^3.2.0",
     "sharp": "^0.33.0",
+    "stripe": "^18.4.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "uuid": "^9.0.1",

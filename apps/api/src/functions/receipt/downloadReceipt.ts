@@ -1,6 +1,6 @@
-import { APIGatewayProxyHandler, APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { success, badRequest, notFound, unauthorized, internalServerError } from '../../utils/lambdaResponseUtils.js';
+import { badRequest, internalServerError, notFound, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { ReceiptService } from '../../services/receiptService.js';
 import { pool } from '../../config/database.js';
@@ -143,7 +143,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       receipt.stored_language !== language;
 
     let downloadUrl = receipt.download_url;
-    let fileName = `receipt-${receipt.receipt_number}.${format}`;
+    const fileName = `receipt-${receipt.receipt_number}.${format}`;
     let content: string | undefined;
 
     if (needsGeneration) {

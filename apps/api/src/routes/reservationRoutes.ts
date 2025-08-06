@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response, Router } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { ReservationService } from '../services/reservationService';
 import { inventoryService } from '../services/inventoryService';

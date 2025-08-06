@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { TaxService } from '../../src/services/taxService.js';
 import { TaxCalculationRequest, TaxCalculationResult } from '../../src/types/Payment.js';
 import { PaymentValidationError } from '../../src/errors/PaymentErrors.js';
