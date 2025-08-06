@@ -1,6 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { TaxService } from '../../services/taxService.js';
 import { pool } from '../../config/database.js';
@@ -73,7 +78,7 @@ const calculateTaxSchema = {
   properties: {
     businessId: {
       type: 'string',
-      format: 'uuid'
+      format: 'uuid',
     },
     customerAddress: {
       type: 'object',
@@ -83,8 +88,8 @@ const calculateTaxSchema = {
         city: { type: 'string', maxLength: 100 },
         state: { type: 'string', minLength: 2, maxLength: 3 },
         postalCode: { type: 'string', maxLength: 20 },
-        country: { type: 'string', minLength: 2, maxLength: 3 }
-      }
+        country: { type: 'string', minLength: 2, maxLength: 3 },
+      },
     },
     items: {
       type: 'array',
@@ -99,25 +104,25 @@ const calculateTaxSchema = {
           amount: { type: 'number', minimum: 0 },
           quantity: { type: 'number', minimum: 1, maximum: 1000 },
           taxCategory: { type: 'string', maxLength: 100 },
-          taxExempt: { type: 'boolean' }
-        }
-      }
+          taxExempt: { type: 'boolean' },
+        },
+      },
     },
     currency: {
       type: 'string',
-      enum: ['USD', 'CAD', 'EUR', 'GBP']
+      enum: ['USD', 'CAD', 'EUR', 'GBP'],
     },
     transactionType: {
       type: 'string',
-      enum: ['sale', 'refund', 'adjustment']
-    }
+      enum: ['sale', 'refund', 'adjustment'],
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
  * Calculate Tax Lambda Handler
- * 
+ *
  * Calculates applicable taxes for transactions with detailed breakdown by jurisdiction.
  * Integrates with tax service providers and handles various tax scenarios.
  */
@@ -125,15 +130,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestBody: CalculateTaxRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'tax_calculate',
@@ -142,7 +147,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -172,9 +177,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       FROM businesses b
       WHERE b.id = $1
     `;
-    
+
     const businessResult = await pool.query(businessQuery, [requestBody.businessId]);
-    
+
     if (businessResult.rows.length === 0) {
       return badRequest('Business not found');
     }
@@ -195,7 +200,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: requestBody.businessId,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to calculate taxes for this business');
     }
@@ -210,19 +215,20 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const transactionType = requestBody.transactionType || 'sale';
 
     // Calculate total amounts
-    const totalAmount = requestBody.items.reduce((sum, item) => 
-      sum + (item.amount * (item.quantity || 1)), 0
+    const totalAmount = requestBody.items.reduce(
+      (sum, item) => sum + item.amount * (item.quantity || 1),
+      0
     );
 
     const taxExemptAmount = requestBody.items
       .filter(item => item.taxExempt)
-      .reduce((sum, item) => sum + (item.amount * (item.quantity || 1)), 0);
+      .reduce((sum, item) => sum + item.amount * (item.quantity || 1), 0);
 
     const taxableAmount = totalAmount - taxExemptAmount;
 
     // Use tax service for calculations
     const taxService = new TaxService();
-    
+
     let taxCalculation;
     try {
       taxCalculation = await taxService.calculateTax({
@@ -233,13 +239,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         currency,
         transactionType,
         taxId: business.tax_id,
-        businessTaxExempt: business.tax_exempt
+        businessTaxExempt: business.tax_exempt,
       });
     } catch (taxServiceError) {
       logger.error('Tax service calculation failed', {
         businessId: requestBody.businessId,
         error: taxServiceError instanceof Error ? taxServiceError.message : 'Unknown error',
-        correlationId
+        correlationId,
       });
       return internalServerError('Tax calculation service unavailable. Please try again.');
     }
@@ -271,7 +277,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       JSON.stringify(taxCalculation.itemTaxDetails),
       taxCalculation.taxProvider,
       taxCalculation.jurisdiction,
-      correlationId
+      correlationId,
     ];
 
     await pool.query(taxCalculationInsertQuery, taxCalculationValues);
@@ -293,8 +299,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         transactionType,
         itemCount: requestBody.items.length,
         customerState: requestBody.customerAddress.state,
-        customerCountry: requestBody.customerAddress.country
-      }
+        customerCountry: requestBody.customerAddress.country,
+      },
     });
 
     // Performance metrics
@@ -312,7 +318,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       taxProvider: taxCalculation.taxProvider,
       jurisdiction: taxCalculation.jurisdiction,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -327,14 +333,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       itemTaxDetails: taxCalculation.itemTaxDetails,
       calculatedAt: new Date(),
       taxProvider: taxCalculation.taxProvider,
-      jurisdiction: taxCalculation.jurisdiction
+      jurisdiction: taxCalculation.jurisdiction,
     };
 
     return success(response, 'Tax calculation completed successfully');
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in calculate tax', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -342,7 +347,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
-      requestBody: requestBody || 'Failed to parse'
+      requestBody: requestBody || 'Failed to parse',
     });
 
     await auditLogger({
@@ -353,9 +358,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessId: requestBody?.businessId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred. Please try again or contact support.'
+    );
   }
 };

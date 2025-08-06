@@ -1,6 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { PayoutService } from '../../services/payoutService.js';
 import { pool } from '../../config/database.js';
@@ -61,30 +66,30 @@ const calculatePayoutSchema = {
   properties: {
     businessId: {
       type: 'string',
-      format: 'uuid'
+      format: 'uuid',
     },
     dateFrom: {
       type: 'string',
-      format: 'date'
+      format: 'date',
     },
     dateTo: {
       type: 'string',
-      format: 'date'
+      format: 'date',
     },
     includeAdjustments: {
-      type: 'boolean'
+      type: 'boolean',
     },
     currency: {
       type: 'string',
-      enum: ['USD', 'CAD', 'EUR', 'GBP']
-    }
+      enum: ['USD', 'CAD', 'EUR', 'GBP'],
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
  * Calculate Payout Lambda Handler
- * 
+ *
  * Calculates detailed payout amounts for a business including platform fees,
  * adjustments, refunds, and provides comprehensive transaction breakdown.
  */
@@ -92,15 +97,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestBody: CalculatePayoutRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'payout_calculate',
@@ -109,7 +114,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -135,7 +140,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Validate date range
     const dateFrom = new Date(requestBody.dateFrom);
     const dateTo = new Date(requestBody.dateTo);
-    
+
     if (dateFrom >= dateTo) {
       return badRequest('dateFrom must be before dateTo');
     }
@@ -152,9 +157,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       FROM businesses b
       WHERE b.id = $1
     `;
-    
+
     const businessResult = await pool.query(businessQuery, [requestBody.businessId]);
-    
+
     if (businessResult.rows.length === 0) {
       return badRequest('Business not found');
     }
@@ -175,7 +180,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: requestBody.businessId,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to calculate payouts for this business');
     }
@@ -205,12 +210,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         AND pt.currency = $4
       ORDER BY pt.captured_at DESC
     `;
-    
+
     const transactionsResult = await pool.query(transactionsQuery, [
       requestBody.businessId,
       dateFrom,
       dateTo,
-      currency
+      currency,
     ]);
 
     // Get adjustments within date range
@@ -223,11 +228,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           AND bpa.created_at BETWEEN $2 AND $3
         ORDER BY bpa.created_at DESC
       `;
-      
+
       const adjustmentsResult = await pool.query(adjustmentsQuery, [
         requestBody.businessId,
         dateFrom,
-        dateTo
+        dateTo,
       ]);
 
       adjustments = adjustmentsResult.rows.map(row => ({
@@ -235,7 +240,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         type: row.adjustment_type,
         amount: parseFloat(row.adjustment_amount) || 0,
         description: row.reason,
-        createdAt: new Date(row.created_at)
+        createdAt: new Date(row.created_at),
       }));
     }
 
@@ -247,9 +252,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       netAmount: parseFloat(row.business_payout) || 0,
       capturedAt: new Date(row.captured_at),
       reservationId: row.reservation_id,
-      description: row.reservation_description || (row.metadata ? 
-        (typeof row.metadata === 'string' ? JSON.parse(row.metadata).description : row.metadata.description) 
-        : undefined)
+      description:
+        row.reservation_description ||
+        (row.metadata
+          ? typeof row.metadata === 'string'
+            ? JSON.parse(row.metadata).description
+            : row.metadata.description
+          : undefined),
     }));
 
     const totalRevenue = transactions.reduce((sum, txn) => sum + txn.amount, 0);
@@ -260,7 +269,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     // Use payout service for any additional calculations or validations
     const payoutService = new PayoutService();
-    
+
     // Validate calculations if needed
     try {
       await payoutService.validatePayoutCalculation({
@@ -268,13 +277,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         totalRevenue,
         totalPlatformFees,
         netPayoutAmount,
-        currency
+        currency,
       });
     } catch (validationError) {
       logger.warn('Payout calculation validation warning', {
         businessId: requestBody.businessId,
         error: validationError instanceof Error ? validationError.message : 'Unknown error',
-        correlationId
+        correlationId,
       });
     }
 
@@ -293,8 +302,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         totalRevenue,
         netPayoutAmount,
         transactionCount: transactions.length,
-        currency
-      }
+        currency,
+      },
     });
 
     // Performance metrics
@@ -310,7 +319,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       adjustmentCount: adjustments.length,
       currency,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -319,7 +328,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessName: business.name,
       period: {
         from: dateFrom,
-        to: dateTo
+        to: dateTo,
       },
       summary: {
         totalRevenue,
@@ -327,19 +336,18 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         totalAdjustments,
         netPayoutAmount,
         transactionCount: transactions.length,
-        refundCount: adjustments.filter(adj => adj.type === 'refund_deduction').length
+        refundCount: adjustments.filter(adj => adj.type === 'refund_deduction').length,
       },
       transactions,
       adjustments,
       currency,
-      calculatedAt: new Date()
+      calculatedAt: new Date(),
     };
 
     return success(response, `Payout calculated for ${transactions.length} transactions`);
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in calculate payout', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -347,7 +355,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
-      requestBody: requestBody || 'Failed to parse'
+      requestBody: requestBody || 'Failed to parse',
     });
 
     await auditLogger({
@@ -358,9 +366,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessId: requestBody?.businessId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred. Please try again or contact support.'
+    );
   }
 };

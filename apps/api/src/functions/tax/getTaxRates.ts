@@ -1,6 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { TaxService } from '../../services/taxService.js';
 import { pool } from '../../config/database.js';
@@ -50,7 +55,7 @@ interface TaxRate {
 
 /**
  * Get Tax Rates Lambda Handler
- * 
+ *
  * Retrieves applicable tax rates for a specific address and business context.
  * Provides detailed tax rate information by jurisdiction and tax type.
  */
@@ -58,15 +63,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestParams: GetTaxRatesRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'tax_rates_get',
@@ -75,7 +80,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -83,9 +88,14 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Parse parameters from query string and path
     const queryParams = event.queryStringParameters || {};
     const pathParams = event.pathParameters || {};
-    
+
     // Extract address from query parameters
-    if (!queryParams.city || !queryParams.state || !queryParams.postalCode || !queryParams.country) {
+    if (
+      !queryParams.city ||
+      !queryParams.state ||
+      !queryParams.postalCode ||
+      !queryParams.country
+    ) {
       return badRequest('Address parameters (city, state, postalCode, country) are required');
     }
 
@@ -95,10 +105,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         city: queryParams.city,
         state: queryParams.state,
         postalCode: queryParams.postalCode,
-        country: queryParams.country
+        country: queryParams.country,
       },
       businessId: queryParams.businessId || pathParams.businessId,
-      taxCategory: queryParams.taxCategory
+      taxCategory: queryParams.taxCategory,
     };
 
     // Validate address format
@@ -118,9 +128,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         FROM businesses b
         WHERE b.id = $1
       `;
-      
+
       const businessResult = await pool.query(businessQuery, [requestParams.businessId]);
-      
+
       if (businessResult.rows.length === 0) {
         return badRequest('Business not found');
       }
@@ -141,7 +151,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           businessId: requestParams.businessId,
           correlationId,
           success: false,
-          error: 'Insufficient permissions'
+          error: 'Insufficient permissions',
         });
         return unauthorized('You do not have permission to get tax rates for this business');
       }
@@ -154,21 +164,21 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     // Use tax service to retrieve rates
     const taxService = new TaxService();
-    
+
     let taxRatesData;
     try {
       taxRatesData = await taxService.getTaxRates({
         address: requestParams.address,
         businessId: requestParams.businessId,
         businessType: business?.business_type,
-        taxCategory: requestParams.taxCategory
+        taxCategory: requestParams.taxCategory,
       });
     } catch (taxServiceError) {
       logger.error('Tax service rate retrieval failed', {
         address: requestParams.address,
         businessId: requestParams.businessId,
         error: taxServiceError instanceof Error ? taxServiceError.message : 'Unknown error',
-        correlationId
+        correlationId,
       });
       return internalServerError('Tax rate service unavailable. Please try again.');
     }
@@ -193,7 +203,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       JSON.stringify(taxRatesData.taxRates),
       taxRatesData.combinedRate,
       taxRatesData.taxProvider,
-      correlationId
+      correlationId,
     ];
 
     await pool.query(taxRateLookupInsertQuery, taxRateLookupValues);
@@ -213,8 +223,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         combinedRate: taxRatesData.combinedRate,
         taxCategory: requestParams.taxCategory,
         rateCount: taxRatesData.taxRates.length,
-        businessTaxExempt: business?.tax_exempt
-      }
+        businessTaxExempt: business?.tax_exempt,
+      },
     });
 
     // Performance metrics
@@ -229,7 +239,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessName: business?.name,
       taxProvider: taxRatesData.taxProvider,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -242,14 +252,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       taxProvider: taxRatesData.taxProvider,
       businessId: requestParams.businessId,
       businessTaxExempt: business?.tax_exempt,
-      retrievedAt: new Date()
+      retrievedAt: new Date(),
     };
 
     return success(response, `Retrieved ${taxRatesData.taxRates.length} applicable tax rates`);
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in get tax rates', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -258,7 +267,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
       queryParams: event.queryStringParameters,
-      pathParams: event.pathParameters
+      pathParams: event.pathParameters,
     });
 
     await auditLogger({
@@ -269,9 +278,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessId: requestParams?.businessId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred. Please try again or contact support.'
+    );
   }
 };

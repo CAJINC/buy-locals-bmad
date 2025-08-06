@@ -1,6 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { PayoutService } from '../../services/payoutService.js';
 import { pool } from '../../config/database.js';
@@ -38,34 +43,34 @@ const schedulePayoutSchema = {
   properties: {
     businessId: {
       type: 'string',
-      format: 'uuid'
+      format: 'uuid',
     },
     payoutDate: {
       type: 'string',
-      format: 'date-time'
+      format: 'date-time',
     },
     payoutType: {
       type: 'string',
-      enum: ['manual', 'automatic']
+      enum: ['manual', 'automatic'],
     },
     description: {
       type: 'string',
-      maxLength: 1000
+      maxLength: 1000,
     },
     metadata: {
       type: 'object',
       additionalProperties: {
         type: 'string',
-        maxLength: 500
-      }
-    }
+        maxLength: 500,
+      },
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
  * Schedule Payout Lambda Handler
- * 
+ *
  * Schedules payouts for businesses with proper authorization, validation,
  * and Stripe payout creation. Handles both manual and automatic payout scheduling.
  */
@@ -73,15 +78,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestBody: SchedulePayoutRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'payout_schedule',
@@ -90,7 +95,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -120,9 +125,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       FROM businesses b
       WHERE b.id = $1
     `;
-    
+
     const businessResult = await pool.query(businessQuery, [requestBody.businessId]);
-    
+
     if (businessResult.rows.length === 0) {
       return badRequest('Business not found');
     }
@@ -143,7 +148,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: requestBody.businessId,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to schedule payouts for this business');
     }
@@ -160,7 +165,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Validate payout date
     const now = new Date();
     const payoutDate = requestBody.payoutDate ? new Date(requestBody.payoutDate) : now;
-    
+
     // Manual payouts can be scheduled for future dates, automatic payouts are immediate
     if (requestBody.payoutType === 'manual' && payoutDate <= now) {
       return badRequest('Manual payout date must be in the future');
@@ -178,10 +183,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         AND bp.status IN ('scheduled', 'processing') 
         AND DATE(bp.expected_payout_date) = DATE($2)
     `;
-    
+
     const existingPayoutResult = await pool.query(existingPayoutQuery, [
       requestBody.businessId,
-      payoutDate
+      payoutDate,
     ]);
 
     if (parseInt(existingPayoutResult.rows[0].count) > 0) {
@@ -207,9 +212,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         )
       GROUP BY pt.currency
     `;
-    
+
     const availablePayoutResult = await pool.query(availablePayoutQuery, [requestBody.businessId]);
-    
+
     if (availablePayoutResult.rows.length === 0) {
       return badRequest('No funds available for payout');
     }
@@ -223,7 +228,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Check minimum payout amount
     const minimumPayoutAmount = business.minimum_payout_amount || 100; // Default $1.00 minimum
     if (totalAvailable < minimumPayoutAmount) {
-      return badRequest(`Minimum payout amount is ${minimumPayoutAmount/100} ${currency}. Available: ${totalAvailable/100} ${currency}`);
+      return badRequest(
+        `Minimum payout amount is ${minimumPayoutAmount / 100} ${currency}. Available: ${totalAvailable / 100} ${currency}`
+      );
     }
 
     // Get transaction IDs for this payout
@@ -240,14 +247,14 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           WHERE bp.status IN ('scheduled', 'processing', 'paid')
         )
     `;
-    
+
     const transactionIdsResult = await pool.query(transactionIdsQuery, [requestBody.businessId]);
     const transactionIds = transactionIdsResult.rows[0].transaction_ids || [];
 
     // Use payout service to create payout with Stripe
     const payoutService = new PayoutService();
     const payoutId = uuidv4();
-    
+
     try {
       await payoutService.createStripePayout({
         businessId: requestBody.businessId,
@@ -260,15 +267,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           payoutId,
           correlationId,
           payoutType: requestBody.payoutType,
-          transactionCount: transactionCount.toString()
-        }
+          transactionCount: transactionCount.toString(),
+        },
       });
     } catch (stripeError) {
       logger.error('Failed to create Stripe payout', {
         businessId: requestBody.businessId,
         amount: totalAvailable,
         error: stripeError instanceof Error ? stripeError.message : 'Unknown error',
-        correlationId
+        correlationId,
       });
       return internalServerError('Failed to create payout with payment processor');
     }
@@ -301,10 +308,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       transactionCount,
       payoutDate,
       JSON.stringify(requestBody.metadata || {}),
-      correlationId
+      correlationId,
     ];
 
-    const payoutRecord = await pool.query(payoutInsertQuery, payoutValues);
+    await pool.query(payoutInsertQuery, payoutValues);
 
     // Audit log success
     await auditLogger({
@@ -320,8 +327,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         currency,
         payoutType: requestBody.payoutType,
         payoutDate: payoutDate.toISOString(),
-        transactionCount
-      }
+        transactionCount,
+      },
     });
 
     // Performance metrics
@@ -337,7 +344,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       expectedArrivalDate,
       transactionCount,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -354,18 +361,18 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       status: requestBody.payoutType === 'automatic' ? 'processing' : 'scheduled',
       description: requestBody.description,
       transactionCount,
-      expectedArrivalDate
+      expectedArrivalDate,
     };
 
-    const message = requestBody.payoutType === 'automatic' 
-      ? 'Payout is being processed and will arrive in 2-7 business days'
-      : `Payout scheduled for ${payoutDate.toDateString()}`;
+    const message =
+      requestBody.payoutType === 'automatic'
+        ? 'Payout is being processed and will arrive in 2-7 business days'
+        : `Payout scheduled for ${payoutDate.toDateString()}`;
 
     return success(response, message);
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in schedule payout', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -373,7 +380,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
-      requestBody: requestBody || 'Failed to parse'
+      requestBody: requestBody || 'Failed to parse',
     });
 
     await auditLogger({
@@ -384,9 +391,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessId: requestBody?.businessId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred. Please try again or contact support.'
+    );
   }
 };

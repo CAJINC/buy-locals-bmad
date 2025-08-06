@@ -1,6 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { pool } from '../../config/database.js';
 import { auditLogger, sanitizeInput } from '../../middleware/security.js';
@@ -43,22 +48,22 @@ interface PayoutHistoryItem {
 
 /**
  * Get Payout History Lambda Handler
- * 
+ *
  * Retrieves paginated payout history for a business with filtering options.
  * Supports business owners and admins with appropriate data access controls.
  */
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent) => {
   const correlationId = uuidv4();
   const startTime = Date.now();
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'payout_history_get',
@@ -67,20 +72,22 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
 
     // Extract business ID from path parameters
     const businessId = event.pathParameters?.businessId;
-    
+
     if (!businessId) {
       return badRequest('Business ID is required');
     }
 
     // Validate business ID format
-    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}$/i.test(businessId)) {
+    if (
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}$/i.test(businessId)
+    ) {
       return badRequest('Invalid business ID format');
     }
 
@@ -99,9 +106,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       FROM businesses b
       WHERE b.id = $1
     `;
-    
+
     const businessResult = await pool.query(businessQuery, [businessId]);
-    
+
     if (businessResult.rows.length === 0) {
       return badRequest('Business not found');
     }
@@ -122,14 +129,14 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to view payout history for this business');
     }
 
     // Build dynamic WHERE clause for filtering
     const whereConditions = ['bp.business_id = $1'];
-    const queryValues: any[] = [businessId];
+    const queryValues: unknown[] = [businessId];
     let paramIndex = 2;
 
     if (status) {
@@ -164,7 +171,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       FROM business_payouts bp
       WHERE ${whereClause}
     `;
-    
+
     const countResult = await pool.query(countQuery, queryValues);
     const total = parseInt(countResult.rows[0].total) || 0;
 
@@ -184,7 +191,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       ORDER BY bp.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
-    
+
     queryValues.push(limit, offset);
     const payoutsResult = await pool.query(payoutsQuery, queryValues);
 
@@ -199,13 +206,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       WHERE bp.business_id = $1
       GROUP BY currency
     `;
-    
+
     const summaryResult = await pool.query(summaryQuery, [businessId]);
     const summary = summaryResult.rows[0] || {
       total_payouts: 0,
       total_amount: 0,
       currency: business.currency || 'USD',
-      last_payout_date: null
+      last_payout_date: null,
     };
 
     // Map results to response format
@@ -223,7 +230,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       paidAt: row.paid_at ? new Date(row.paid_at) : undefined,
       stripePayoutId: row.stripe_payout_id,
       failureReason: row.failure_reason,
-      createdAt: new Date(row.created_at)
+      createdAt: new Date(row.created_at),
     }));
 
     // Audit log access
@@ -243,10 +250,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           status,
           payoutType,
           dateFrom: dateFrom?.toISOString(),
-          dateTo: dateTo?.toISOString()
+          dateTo: dateTo?.toISOString(),
         },
-        accessType: isBusinessOwner ? 'business_owner' : isAdmin ? 'admin' : 'finance'
-      }
+        accessType: isBusinessOwner ? 'business_owner' : isAdmin ? 'admin' : 'finance',
+      },
     });
 
     // Performance metrics
@@ -261,7 +268,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       userId,
       accessType: isBusinessOwner ? 'business_owner' : isAdmin ? 'admin' : 'finance',
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -273,22 +280,21 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         limit,
         total,
         hasNext,
-        hasPrevious
+        hasPrevious,
       },
       summary: {
         totalPayouts: parseInt(summary.total_payouts) || 0,
         totalAmount: parseFloat(summary.total_amount) || 0,
         currency: summary.currency,
-        lastPayoutDate: summary.last_payout_date ? new Date(summary.last_payout_date) : undefined
+        lastPayoutDate: summary.last_payout_date ? new Date(summary.last_payout_date) : undefined,
       },
-      payouts
+      payouts,
     };
 
     return success(response);
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in get payout history', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -296,7 +302,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
-      businessId: event.pathParameters?.businessId
+      businessId: event.pathParameters?.businessId,
     });
 
     await auditLogger({
@@ -307,9 +313,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       businessId: event.pathParameters?.businessId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred. Please try again or contact support.'
+    );
   }
 };

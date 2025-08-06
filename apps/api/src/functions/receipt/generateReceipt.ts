@@ -1,8 +1,18 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, notFound, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  notFound,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
-import { ReceiptData, ReceiptGenerationOptions, ReceiptService } from '../../services/receiptService.js';
+import {
+  ReceiptData,
+  ReceiptGenerationOptions,
+  ReceiptService,
+} from '../../services/receiptService.js';
 import { pool } from '../../config/database.js';
 import { auditLogger, sanitizeInput } from '../../middleware/security.js';
 import { validateBody } from '../../middleware/validation.js';
@@ -32,32 +42,32 @@ const generateReceiptSchema = {
   properties: {
     transactionId: {
       type: 'string',
-      format: 'uuid'
+      format: 'uuid',
     },
     format: {
       type: 'string',
-      enum: ['pdf', 'html', 'text']
+      enum: ['pdf', 'html', 'text'],
     },
     language: {
       type: 'string',
-      enum: ['en', 'es', 'fr']
+      enum: ['en', 'es', 'fr'],
     },
     includeQrCode: {
-      type: 'boolean'
+      type: 'boolean',
     },
     includeTaxBreakdown: {
-      type: 'boolean'
+      type: 'boolean',
     },
     includeRefundInfo: {
-      type: 'boolean'
-    }
+      type: 'boolean',
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
  * Generate Receipt Lambda Handler
- * 
+ *
  * Generates a receipt in the requested format for a completed transaction.
  * Supports PDF, HTML, and text formats with multi-language support.
  */
@@ -65,15 +75,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestBody: GenerateReceiptRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'receipt_generate',
@@ -82,7 +92,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -148,15 +158,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       LEFT JOIN receipts r ON pt.id = r.transaction_id
       WHERE pt.id = $1 AND pt.status IN ('paid', 'refunded', 'partially_refunded')
     `;
-    
+
     const transactionResult = await pool.query(transactionQuery, [requestBody.transactionId]);
-    
+
     if (transactionResult.rows.length === 0) {
       return notFound('Transaction not found or not eligible for receipt generation');
     }
 
     const transaction = transactionResult.rows[0];
-    
+
     // Authorization check - user must be customer, business owner, or admin
     const isCustomer = transaction.customer_id === userId;
     const isBusinessOwner = await checkBusinessOwnership(transaction.business_id, userId);
@@ -171,7 +181,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: transaction.business_id,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to generate this receipt');
     }
@@ -192,7 +202,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       WHERE transaction_id = $1
       ORDER BY created_at
     `;
-    
+
     const itemsResult = await pool.query(itemsQuery, [requestBody.transactionId]);
 
     // Build receipt data
@@ -222,7 +232,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         totalPrice: item.total_price,
         taxRate: item.tax_rate || 0,
         taxAmount: item.tax_amount || 0,
-        category: item.category
+        category: item.category,
       })),
       business: {
         id: transaction.business_id,
@@ -233,7 +243,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         city: transaction.business_city,
         state: transaction.business_state,
         postalCode: transaction.business_postal_code,
-        logoUrl: transaction.business_logo_url
+        logoUrl: transaction.business_logo_url,
       } as any, // Cast as any for Business type compatibility
       customer: {
         id: transaction.customer_id,
@@ -241,10 +251,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         profile: {
           firstName: transaction.customer_first_name,
           lastName: transaction.customer_last_name,
-          phone: transaction.customer_phone
-        }
+          phone: transaction.customer_phone,
+        },
       } as any, // Cast as any for User type compatibility
-      metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined
+      metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined,
     };
 
     // Configure receipt generation options
@@ -253,13 +263,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       language: requestBody.language || 'en',
       includeQrCode: requestBody.includeQrCode ?? true,
       includeTaxBreakdown: requestBody.includeTaxBreakdown ?? true,
-      includeRefundInfo: requestBody.includeRefundInfo ?? (receiptData.status !== 'paid'),
-      branding: transaction.primary_color ? {
-        primaryColor: transaction.primary_color,
-        secondaryColor: transaction.secondary_color || '#64748b',
-        fontFamily: 'Inter, system-ui, -apple-system',
-        logoUrl: transaction.business_logo_url
-      } : undefined
+      includeRefundInfo: requestBody.includeRefundInfo ?? receiptData.status !== 'paid',
+      branding: transaction.primary_color
+        ? {
+            primaryColor: transaction.primary_color,
+            secondaryColor: transaction.secondary_color || '#64748b',
+            fontFamily: 'Inter, system-ui, -apple-system',
+            logoUrl: transaction.business_logo_url,
+          }
+        : undefined,
     };
 
     // Generate receipt using receipt service
@@ -271,7 +283,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         transactionId: requestBody.transactionId,
         format: requestBody.format,
         error: generationResult.error,
-        correlationId
+        correlationId,
       });
       return internalServerError(`Receipt generation failed: ${generationResult.error}`);
     }
@@ -288,7 +300,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         language: options.language,
         downloadUrl: generationResult.downloadUrl,
         generatedAt: new Date(),
-        correlationId
+        correlationId,
       });
     }
 
@@ -304,8 +316,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       metadata: {
         transactionId: requestBody.transactionId,
         format: requestBody.format,
-        language: options.language
-      }
+        language: options.language,
+      },
     });
 
     // Performance metrics
@@ -317,7 +329,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       format: requestBody.format,
       userId,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -325,20 +337,20 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       receiptId: receiptData.id,
       receiptNumber: receiptData.receiptNumber,
       format: requestBody.format,
-      content: requestBody.format === 'pdf' 
-        ? undefined 
-        : typeof generationResult.content === 'string' 
-          ? generationResult.content 
-          : Buffer.from(generationResult.content!).toString('base64'),
+      content:
+        requestBody.format === 'pdf'
+          ? undefined
+          : typeof generationResult.content === 'string'
+            ? generationResult.content
+            : Buffer.from(generationResult.content!).toString('base64'),
       downloadUrl: generationResult.downloadUrl,
-      generatedAt: generationResult.generatedAt.toISOString()
+      generatedAt: generationResult.generatedAt.toISOString(),
     };
 
     return success(response, 'Receipt generated successfully');
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in generate receipt', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -346,7 +358,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
-      requestBody: requestBody || 'Failed to parse'
+      requestBody: requestBody || 'Failed to parse',
     });
 
     await auditLogger({
@@ -356,10 +368,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       userId: event.requestContext.authorizer?.userId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred while generating the receipt. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred while generating the receipt. Please try again or contact support.'
+    );
   }
 };
 
@@ -381,11 +395,15 @@ async function checkBusinessOwnership(businessId: string, userId: string): Promi
 function generateReceiptNumber(businessId: string): string {
   const year = new Date().getFullYear();
   const businessPrefix = businessId.substring(0, 4).toUpperCase();
-  const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+  const randomSuffix = Math.floor(Math.random() * 999999)
+    .toString()
+    .padStart(6, '0');
   return `${businessPrefix}-${year}-${randomSuffix}`;
 }
 
-function mapTransactionStatusToReceiptStatus(status: string): 'paid' | 'refunded' | 'partially_refunded' | 'disputed' {
+function mapTransactionStatusToReceiptStatus(
+  status: string
+): 'paid' | 'refunded' | 'partially_refunded' | 'disputed' {
   switch (status) {
     case 'paid':
     case 'completed':
@@ -431,6 +449,6 @@ async function storeReceiptRecord(record: {
     record.language,
     record.downloadUrl,
     record.generatedAt,
-    record.correlationId
+    record.correlationId,
   ]);
 }

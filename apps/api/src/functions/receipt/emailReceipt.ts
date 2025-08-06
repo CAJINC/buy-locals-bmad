@@ -1,6 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, notFound, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  notFound,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { EmailReceiptOptions, ReceiptData, ReceiptService } from '../../services/receiptService.js';
 import { pool } from '../../config/database.js';
@@ -35,56 +41,56 @@ const emailReceiptSchema = {
   properties: {
     transactionId: {
       type: 'string',
-      format: 'uuid'
+      format: 'uuid',
     },
     recipientEmail: {
       type: 'string',
-      format: 'email'
+      format: 'email',
     },
     ccEmails: {
       type: 'array',
       items: {
         type: 'string',
-        format: 'email'
+        format: 'email',
       },
-      maxItems: 5
+      maxItems: 5,
     },
     bccEmails: {
       type: 'array',
       items: {
         type: 'string',
-        format: 'email'
+        format: 'email',
       },
-      maxItems: 5
+      maxItems: 5,
     },
     customSubject: {
       type: 'string',
-      maxLength: 200
+      maxLength: 200,
     },
     customMessage: {
       type: 'string',
-      maxLength: 1000
+      maxLength: 1000,
     },
     language: {
       type: 'string',
-      enum: ['en', 'es', 'fr']
+      enum: ['en', 'es', 'fr'],
     },
     attachPdf: {
-      type: 'boolean'
+      type: 'boolean',
     },
     sendToCustomer: {
-      type: 'boolean'
+      type: 'boolean',
     },
     sendToBusiness: {
-      type: 'boolean'
-    }
+      type: 'boolean',
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
  * Email Receipt Lambda Handler
- * 
+ *
  * Sends a receipt via email to specified recipients with customizable options.
  * Supports HTML email with optional PDF attachment and multi-language templates.
  */
@@ -92,15 +98,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestBody: EmailReceiptRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'receipt_email',
@@ -109,7 +115,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -135,7 +141,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Rate limiting check - prevent email spam
     const emailRateLimit = await checkEmailRateLimit(userId, requestBody.transactionId);
     if (!emailRateLimit.allowed) {
-      return badRequest(`Email rate limit exceeded. Please wait ${emailRateLimit.waitTimeMinutes} minutes before sending another receipt.`);
+      return badRequest(
+        `Email rate limit exceeded. Please wait ${emailRateLimit.waitTimeMinutes} minutes before sending another receipt.`
+      );
     }
 
     // Query transaction details with full context
@@ -182,15 +190,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       LEFT JOIN receipts r ON pt.id = r.transaction_id
       WHERE pt.id = $1 AND pt.status IN ('paid', 'refunded', 'partially_refunded')
     `;
-    
+
     const transactionResult = await pool.query(transactionQuery, [requestBody.transactionId]);
-    
+
     if (transactionResult.rows.length === 0) {
       return notFound('Transaction not found or not eligible for receipt email');
     }
 
     const transaction = transactionResult.rows[0];
-    
+
     // Authorization check - user must be customer, business owner, or admin
     const isCustomer = transaction.customer_id === userId;
     const isBusinessOwner = transaction.business_owner_id === userId;
@@ -205,13 +213,17 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: transaction.business_id,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to email this receipt');
     }
 
     // Additional validation for customer/business email restrictions
-    if (isCustomer && !requestBody.sendToCustomer && requestBody.recipientEmail !== transaction.customer_email) {
+    if (
+      isCustomer &&
+      !requestBody.sendToCustomer &&
+      requestBody.recipientEmail !== transaction.customer_email
+    ) {
       return unauthorized('Customers can only send receipts to their own email address');
     }
 
@@ -224,7 +236,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       WHERE transaction_id = $1
       ORDER BY created_at
     `;
-    
+
     const itemsResult = await pool.query(itemsQuery, [requestBody.transactionId]);
 
     // Build receipt data
@@ -254,7 +266,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         totalPrice: item.total_price,
         taxRate: item.tax_rate || 0,
         taxAmount: item.tax_amount || 0,
-        category: item.category
+        category: item.category,
       })),
       business: {
         id: transaction.business_id,
@@ -265,7 +277,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         city: transaction.business_city,
         state: transaction.business_state,
         postalCode: transaction.business_postal_code,
-        logoUrl: transaction.business_logo_url
+        logoUrl: transaction.business_logo_url,
       } as any,
       customer: {
         id: transaction.customer_id,
@@ -273,10 +285,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         profile: {
           firstName: transaction.customer_first_name,
           lastName: transaction.customer_last_name,
-          phone: transaction.customer_phone
-        }
+          phone: transaction.customer_phone,
+        },
       } as any,
-      metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined
+      metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined,
     };
 
     // Configure email options
@@ -287,7 +299,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       subject: requestBody.customSubject,
       customMessage: requestBody.customMessage,
       language: requestBody.language || 'en',
-      attachPdf: requestBody.attachPdf ?? false
+      attachPdf: requestBody.attachPdf ?? false,
     };
 
     // Send email using receipt service
@@ -299,7 +311,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         transactionId: requestBody.transactionId,
         recipientEmail: requestBody.recipientEmail,
         error: emailResult.error,
-        correlationId
+        correlationId,
       });
       return internalServerError(`Email delivery failed: ${emailResult.error}`);
     }
@@ -313,7 +325,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       messageId: emailResult.messageId!,
       success: true,
       deliveredAt: emailResult.deliveredAt,
-      correlationId
+      correlationId,
     });
 
     // Audit log success
@@ -330,8 +342,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         recipientEmail: requestBody.recipientEmail,
         messageId: emailResult.messageId,
         language: emailOptions.language,
-        attachPdf: emailOptions.attachPdf
-      }
+        attachPdf: emailOptions.attachPdf,
+      },
     });
 
     // Performance metrics
@@ -344,7 +356,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       messageId: emailResult.messageId,
       userId,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -353,14 +365,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       messageId: emailResult.messageId,
       recipientEmail: requestBody.recipientEmail,
       deliveredAt: emailResult.deliveredAt.toISOString(),
-      receiptNumber: receiptData.receiptNumber
+      receiptNumber: receiptData.receiptNumber,
     };
 
     return success(response, 'Receipt email sent successfully');
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log email delivery failure
     if (requestBody) {
       await logEmailDelivery({
@@ -372,10 +383,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         success: false,
         deliveredAt: new Date(),
         error: error instanceof Error ? error.message : String(error),
-        correlationId
+        correlationId,
       });
     }
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in email receipt', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -383,7 +394,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
-      requestBody: requestBody || 'Failed to parse'
+      requestBody: requestBody || 'Failed to parse',
     });
 
     await auditLogger({
@@ -393,16 +404,21 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       userId: event.requestContext.authorizer?.userId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred while sending the receipt email. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred while sending the receipt email. Please try again or contact support.'
+    );
   }
 };
 
 // Helper functions
 
-async function checkEmailRateLimit(userId: string, transactionId: string): Promise<{
+async function checkEmailRateLimit(
+  userId: string,
+  transactionId: string
+): Promise<{
   allowed: boolean;
   waitTimeMinutes?: number;
 }> {
@@ -415,15 +431,15 @@ async function checkEmailRateLimit(userId: string, transactionId: string): Promi
       AND transaction_id = $2 
       AND created_at > NOW() - INTERVAL '1 hour'
     `;
-    
+
     const result = await pool.query(rateLimitQuery, [userId, transactionId]);
     const emailCount = parseInt(result.rows[0]?.email_count || '0');
-    
+
     // Allow max 3 emails per transaction per hour
     if (emailCount >= 3) {
       return { allowed: false, waitTimeMinutes: 60 };
     }
-    
+
     return { allowed: true };
   } catch (error) {
     logger.error('Email rate limit check failed', { error, userId, transactionId });
@@ -435,11 +451,15 @@ async function checkEmailRateLimit(userId: string, transactionId: string): Promi
 function generateReceiptNumber(businessId: string): string {
   const year = new Date().getFullYear();
   const businessPrefix = businessId.substring(0, 4).toUpperCase();
-  const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+  const randomSuffix = Math.floor(Math.random() * 999999)
+    .toString()
+    .padStart(6, '0');
   return `${businessPrefix}-${year}-${randomSuffix}`;
 }
 
-function mapTransactionStatusToReceiptStatus(status: string): 'paid' | 'refunded' | 'partially_refunded' | 'disputed' {
+function mapTransactionStatusToReceiptStatus(
+  status: string
+): 'paid' | 'refunded' | 'partially_refunded' | 'disputed' {
   switch (status) {
     case 'paid':
     case 'completed':
@@ -484,7 +504,7 @@ async function logEmailDelivery(log: {
       log.success,
       log.error,
       log.deliveredAt,
-      log.correlationId
+      log.correlationId,
     ]);
   } catch (error) {
     logger.error('Failed to log email delivery', { error, log });

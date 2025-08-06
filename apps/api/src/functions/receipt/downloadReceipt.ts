@@ -1,6 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, notFound, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  notFound,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { ReceiptService } from '../../services/receiptService.js';
 import { pool } from '../../config/database.js';
@@ -18,23 +24,23 @@ interface DownloadReceiptResponse {
 
 /**
  * Download Receipt Lambda Handler
- * 
+ *
  * Provides secure download links for receipts with proper authorization.
  * Supports both direct content delivery and pre-signed URLs for larger files.
  */
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent) => {
   const correlationId = uuidv4();
   const startTime = Date.now();
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract receipt ID from path parameters
     const receiptId = event.pathParameters?.receiptId;
     const format = event.queryStringParameters?.format || 'pdf';
     const language = event.queryStringParameters?.language || 'en';
-    
+
     if (!receiptId) {
       return badRequest('Receipt ID is required');
     }
@@ -52,10 +58,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Extract user from JWT token (optional for public receipt links)
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     // Check for public access token in query parameters
     const publicToken = event.queryStringParameters?.token;
-    
+
     // Query receipt details with transaction and authorization info
     const receiptQuery = `
       SELECT 
@@ -87,19 +93,19 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       INNER JOIN users u ON r.customer_id = u.id
       WHERE r.id = $1 OR r.receipt_number = $1
     `;
-    
+
     const receiptResult = await pool.query(receiptQuery, [receiptId]);
-    
+
     if (receiptResult.rows.length === 0) {
       return notFound('Receipt not found');
     }
 
     const receipt = receiptResult.rows[0];
-    
+
     // Authorization check
     let authorized = false;
     let authMethod = 'none';
-    
+
     // Check public token access
     if (publicToken && receipt.public_access_token === publicToken) {
       // Check if public link has expired
@@ -109,13 +115,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       authorized = true;
       authMethod = 'public_token';
     }
-    
+
     // Check authenticated user access
     if (!authorized && userId) {
       const isCustomer = receipt.customer_id === userId;
       const isBusinessOwner = receipt.business_owner_id === userId;
       const isAdmin = userRole === 'admin';
-      
+
       if (isCustomer || isBusinessOwner || isAdmin) {
         authorized = true;
         authMethod = isCustomer ? 'customer' : isBusinessOwner ? 'business_owner' : 'admin';
@@ -131,15 +137,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: receipt.business_id,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to download this receipt');
     }
 
     // Check if we need to generate the receipt in the requested format/language
-    const needsGeneration = 
-      !receipt.download_url || 
-      receipt.stored_format !== format || 
+    const needsGeneration =
+      !receipt.download_url ||
+      receipt.stored_format !== format ||
       receipt.stored_language !== language;
 
     let downloadUrl = receipt.download_url;
@@ -149,7 +155,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     if (needsGeneration) {
       // Get transaction data to regenerate receipt
       const transactionData = await getTransactionDataForReceipt(receipt.transaction_id);
-      
+
       if (!transactionData) {
         return internalServerError('Unable to retrieve transaction data for receipt generation');
       }
@@ -161,7 +167,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         language: language as any,
         includeQrCode: true,
         includeTaxBreakdown: true,
-        includeRefundInfo: transactionData.status !== 'paid'
+        includeRefundInfo: transactionData.status !== 'paid',
       });
 
       if (!generationResult.success) {
@@ -170,13 +176,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           format,
           language,
           error: generationResult.error,
-          correlationId
+          correlationId,
         });
         return internalServerError('Failed to generate receipt for download');
       }
 
       downloadUrl = generationResult.downloadUrl;
-      
+
       // For small text receipts, include content directly in response
       if (format === 'text' && generationResult.content) {
         content = Buffer.from(generationResult.content as string).toString('base64');
@@ -204,7 +210,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       language,
       ipAddress: event.requestContext.identity?.sourceIp || 'unknown',
       userAgent: event.headers['User-Agent'] || 'unknown',
-      correlationId
+      correlationId,
     });
 
     // Audit log success
@@ -220,8 +226,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         authMethod,
         format,
         language,
-        regenerated: needsGeneration
-      }
+        regenerated: needsGeneration,
+      },
     });
 
     // Performance metrics
@@ -235,7 +241,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       userId: userId || 'anonymous',
       regenerated: needsGeneration,
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -246,14 +252,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       contentType: getContentType(format),
       downloadUrl: downloadUrl || '',
       expiresAt: expiresAt.toISOString(),
-      content
+      content,
     };
 
     return success(response, 'Receipt download link generated successfully');
-
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Log unexpected errors
     logger.error('Unexpected error in download receipt', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -261,7 +266,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       correlationId,
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId || 'anonymous',
-      receiptId: event.pathParameters?.receiptId
+      receiptId: event.pathParameters?.receiptId,
     });
 
     await auditLogger({
@@ -271,10 +276,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       userId: event.requestContext.authorizer?.userId || 'anonymous',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred while preparing the receipt download. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred while preparing the receipt download. Please try again or contact support.'
+    );
   }
 };
 
@@ -320,9 +327,9 @@ async function getTransactionDataForReceipt(transactionId: string): Promise<any>
       INNER JOIN users u ON pt.user_id = u.id
       WHERE pt.id = $1
     `;
-    
+
     const result = await pool.query(query, [transactionId]);
-    
+
     if (result.rows.length === 0) {
       return null;
     }
@@ -337,7 +344,7 @@ async function getTransactionDataForReceipt(transactionId: string): Promise<any>
       WHERE transaction_id = $1
       ORDER BY created_at
     `;
-    
+
     const itemsResult = await pool.query(itemsQuery, [transactionId]);
 
     // Build receipt data structure
@@ -367,7 +374,7 @@ async function getTransactionDataForReceipt(transactionId: string): Promise<any>
         totalPrice: item.total_price,
         taxRate: item.tax_rate || 0,
         taxAmount: item.tax_amount || 0,
-        category: item.category
+        category: item.category,
       })),
       business: {
         id: transaction.business_id,
@@ -378,7 +385,7 @@ async function getTransactionDataForReceipt(transactionId: string): Promise<any>
         city: transaction.business_city,
         state: transaction.business_state,
         postalCode: transaction.business_postal_code,
-        logoUrl: transaction.business_logo_url
+        logoUrl: transaction.business_logo_url,
       },
       customer: {
         id: transaction.customer_id,
@@ -386,10 +393,10 @@ async function getTransactionDataForReceipt(transactionId: string): Promise<any>
         profile: {
           firstName: transaction.customer_first_name,
           lastName: transaction.customer_last_name,
-          phone: transaction.customer_phone
-        }
+          phone: transaction.customer_phone,
+        },
       },
-      metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined
+      metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined,
     };
   } catch (error) {
     logger.error('Failed to get transaction data for receipt', { error, transactionId });
@@ -400,11 +407,15 @@ async function getTransactionDataForReceipt(transactionId: string): Promise<any>
 function generateReceiptNumber(businessId: string): string {
   const year = new Date().getFullYear();
   const businessPrefix = businessId.substring(0, 4).toUpperCase();
-  const randomSuffix = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+  const randomSuffix = Math.floor(Math.random() * 999999)
+    .toString()
+    .padStart(6, '0');
   return `${businessPrefix}-${year}-${randomSuffix}`;
 }
 
-function mapTransactionStatusToReceiptStatus(status: string): 'paid' | 'refunded' | 'partially_refunded' | 'disputed' {
+function mapTransactionStatusToReceiptStatus(
+  status: string
+): 'paid' | 'refunded' | 'partially_refunded' | 'disputed' {
   switch (status) {
     case 'paid':
     case 'completed':
@@ -421,9 +432,9 @@ function mapTransactionStatusToReceiptStatus(status: string): 'paid' | 'refunded
 }
 
 async function updateReceiptDownloadUrl(
-  receiptId: string, 
-  downloadUrl: string, 
-  format: string, 
+  receiptId: string,
+  downloadUrl: string,
+  format: string,
   language: string
 ): Promise<void> {
   try {
@@ -432,7 +443,7 @@ async function updateReceiptDownloadUrl(
       SET download_url = $1, format = $2, language = $3, updated_at = NOW()
       WHERE id = $4
     `;
-    
+
     await pool.query(updateQuery, [downloadUrl, format, language, receiptId]);
   } catch (error) {
     logger.error('Failed to update receipt download URL', { error, receiptId, downloadUrl });
@@ -492,7 +503,7 @@ async function logReceiptAccess(log: {
       log.language,
       log.ipAddress,
       log.userAgent,
-      log.correlationId
+      log.correlationId,
     ]);
   } catch (error) {
     logger.error('Failed to log receipt access', { error, log });

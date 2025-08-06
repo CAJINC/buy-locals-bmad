@@ -1,22 +1,33 @@
 import { APIGatewayProxyEvent, APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { badRequest, internalServerError, notFound, success, unauthorized } from '../../utils/lambdaResponseUtils.js';
+import {
+  badRequest,
+  internalServerError,
+  notFound,
+  success,
+  unauthorized,
+} from '../../utils/lambdaResponseUtils.js';
 import { logger } from '../../utils/logger.js';
 import { PaymentService } from '../../services/paymentService.js';
 import { pool } from '../../config/database.js';
 import { auditLogger, sanitizeInput } from '../../middleware/security.js';
 import { validateBody } from '../../middleware/validation.js';
-import { 
+import {
   BasePaymentError,
   PaymentProcessingError,
-  PaymentValidationError 
+  PaymentValidationError,
 } from '../../types/Payment.js';
 
 interface ProcessRefundRequest {
   paymentIntentId: string;
   amount?: number;
   reason?: string;
-  reasonCode?: 'duplicate' | 'fraudulent' | 'requested_by_customer' | 'service_cancelled' | 'service_not_delivered';
+  reasonCode?:
+    | 'duplicate'
+    | 'fraudulent'
+    | 'requested_by_customer'
+    | 'service_cancelled'
+    | 'service_not_delivered';
   metadata?: Record<string, string>;
   notifyCustomer?: boolean;
 }
@@ -39,38 +50,44 @@ const processRefundSchema = {
   properties: {
     paymentIntentId: {
       type: 'string',
-      pattern: '^pi_[a-zA-Z0-9]{24,}$' // Stripe payment intent ID pattern
+      pattern: '^pi_[a-zA-Z0-9]{24,}$', // Stripe payment intent ID pattern
     },
     amount: {
       type: 'number',
       minimum: 1,
-      maximum: 1000000 // $10,000 maximum
+      maximum: 1000000, // $10,000 maximum
     },
     reason: {
       type: 'string',
-      maxLength: 1000
+      maxLength: 1000,
     },
     reasonCode: {
       type: 'string',
-      enum: ['duplicate', 'fraudulent', 'requested_by_customer', 'service_cancelled', 'service_not_delivered']
+      enum: [
+        'duplicate',
+        'fraudulent',
+        'requested_by_customer',
+        'service_cancelled',
+        'service_not_delivered',
+      ],
     },
     metadata: {
       type: 'object',
       additionalProperties: {
         type: 'string',
-        maxLength: 500
-      }
+        maxLength: 500,
+      },
     },
     notifyCustomer: {
-      type: 'boolean'
-    }
+      type: 'boolean',
+    },
   },
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
  * Process Refund Lambda Handler
- * 
+ *
  * Processes partial or full refunds for completed payments with proper authorization,
  * business payout adjustments, and comprehensive audit logging.
  */
@@ -78,15 +95,15 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const correlationId = uuidv4();
   const startTime = Date.now();
   let requestBody: ProcessRefundRequest;
-  
+
   try {
     // Security headers and input sanitization
-    const sanitizedInput = sanitizeInput(event);
-    
+    sanitizeInput(event);
+
     // Extract user from JWT token
     const userId = event.requestContext.authorizer?.userId;
     const userRole = event.requestContext.authorizer?.userRole;
-    
+
     if (!userId) {
       await auditLogger({
         operation: 'refund_create',
@@ -95,7 +112,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: '',
         correlationId,
         success: false,
-        error: 'Missing user authentication'
+        error: 'Missing user authentication',
       });
       return unauthorized('Authentication required');
     }
@@ -136,9 +153,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       LEFT JOIN reservations r ON pt.reservation_id = r.id
       WHERE pt.payment_intent_id = $1
     `;
-    
+
     const paymentResult = await pool.query(paymentQuery, [requestBody.paymentIntentId]);
-    
+
     if (paymentResult.rows.length === 0) {
       await auditLogger({
         operation: 'refund_create',
@@ -147,7 +164,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId,
         correlationId,
         success: false,
-        error: 'Payment intent not found'
+        error: 'Payment intent not found',
       });
       return notFound('Payment intent not found');
     }
@@ -159,7 +176,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const isBusinessOwner = paymentRecord.business_owner_id === userId;
     const isAdmin = userRole === 'admin';
 
-    if (!isBusinessOwner && !isAdmin && (!isCustomer || !requestBody.reasonCode?.includes('requested_by_customer'))) {
+    if (
+      !isBusinessOwner &&
+      !isAdmin &&
+      (!isCustomer || !requestBody.reasonCode?.includes('requested_by_customer'))
+    ) {
       await auditLogger({
         operation: 'refund_create',
         entityType: 'refund',
@@ -168,14 +189,16 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         businessId: paymentRecord.business_id,
         correlationId,
         success: false,
-        error: 'Insufficient permissions'
+        error: 'Insufficient permissions',
       });
       return unauthorized('You do not have permission to process refunds for this payment');
     }
 
     // Verify payment status allows refunds
     if (paymentRecord.status !== 'succeeded') {
-      return badRequest(`Cannot refund payment with status: ${paymentRecord.status}. Only succeeded payments can be refunded.`);
+      return badRequest(
+        `Cannot refund payment with status: ${paymentRecord.status}. Only succeeded payments can be refunded.`
+      );
     }
 
     // Verify business is active
@@ -195,7 +218,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     }
 
     if (refundAmount > availableToRefund) {
-      return badRequest(`Cannot refund ${refundAmount}. Only ${availableToRefund} available to refund (${totalRefunded} already refunded from ${capturedAmount} captured).`);
+      return badRequest(
+        `Cannot refund ${refundAmount}. Only ${availableToRefund} available to refund (${totalRefunded} already refunded from ${capturedAmount} captured).`
+      );
     }
 
     // Additional validation for customer-initiated refunds
@@ -211,12 +236,16 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
       // Check if service has already been completed
       if (paymentRecord.reservation_status === 'completed') {
-        return badRequest('Cannot request refund for completed service. Please contact the business directly.');
+        return badRequest(
+          'Cannot request refund for completed service. Please contact the business directly.'
+        );
       }
 
       // Require reason for customer refunds
       if (!requestBody.reason || requestBody.reason.trim().length < 10) {
-        return badRequest('Please provide a detailed reason (minimum 10 characters) for the refund request');
+        return badRequest(
+          'Please provide a detailed reason (minimum 10 characters) for the refund request'
+        );
       }
     }
 
@@ -230,7 +259,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         ...requestBody.metadata,
         initiatedBy: isCustomer ? 'customer' : isBusinessOwner ? 'business' : 'admin',
         reasonCode: requestBody.reasonCode || 'requested_by_customer',
-        correlationId
+        correlationId,
       }
     );
 
@@ -258,10 +287,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       refundResult.platformFeeRefund,
       isCustomer ? 'customer' : isBusinessOwner ? 'business' : 'admin',
       JSON.stringify(requestBody.metadata || {}),
-      correlationId
+      correlationId,
     ];
 
-    const refundRecord = await pool.query(refundInsertQuery, refundValues);
+    await pool.query(refundInsertQuery, refundValues);
 
     // Update payment transaction status if fully refunded
     const newTotalRefunded = totalRefunded + refundAmount;
@@ -277,7 +306,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     // Update reservation status if applicable
     if (paymentRecord.reservation_id) {
       let reservationStatus = paymentRecord.reservation_status;
-      
+
       if (newTotalRefunded >= capturedAmount) {
         reservationStatus = 'cancelled';
       } else if (refundAmount > 0) {
@@ -294,19 +323,22 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     // Create business payout adjustment record
     if (refundResult.businessAdjustment > 0) {
-      await pool.query(`
+      await pool.query(
+        `
         INSERT INTO business_payout_adjustments (
           id, business_id, payment_intent_id, refund_id, adjustment_amount,
           adjustment_type, reason, created_at
         ) VALUES ($1, $2, $3, $4, $5, 'refund_deduction', $6, NOW())
-      `, [
-        uuidv4(),
-        paymentRecord.business_id,
-        requestBody.paymentIntentId,
-        refundResult.refundId,
-        -refundResult.businessAdjustment, // Negative adjustment
-        `Refund processed: ${requestBody.reason || requestBody.reasonCode}`
-      ]);
+      `,
+        [
+          uuidv4(),
+          paymentRecord.business_id,
+          requestBody.paymentIntentId,
+          refundResult.refundId,
+          -refundResult.businessAdjustment, // Negative adjustment
+          `Refund processed: ${requestBody.reason || requestBody.reasonCode}`,
+        ]
+      );
     }
 
     // Send notification if requested
@@ -317,12 +349,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           refundId: refundResult.refundId,
           customerEmail: paymentRecord.customer_email,
           amount: refundAmount,
-          correlationId
+          correlationId,
         });
       } catch (notificationError) {
         logger.warn('Failed to send customer notification', {
           refundId: refundResult.refundId,
-          error: notificationError instanceof Error ? notificationError.message : 'Unknown error'
+          error: notificationError instanceof Error ? notificationError.message : 'Unknown error',
         });
       }
     }
@@ -343,8 +375,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         platformFeeRefund: refundResult.platformFeeRefund,
         reason: requestBody.reason,
         reasonCode: requestBody.reasonCode,
-        initiatedBy: isCustomer ? 'customer' : isBusinessOwner ? 'business' : 'admin'
-      }
+        initiatedBy: isCustomer ? 'customer' : isBusinessOwner ? 'business' : 'admin',
+      },
     });
 
     // Performance metrics
@@ -358,7 +390,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       customerEmail: paymentRecord.customer_email,
       initiatedBy: isCustomer ? 'customer' : isBusinessOwner ? 'business' : 'admin',
       correlationId,
-      processingTimeMs: processingTime
+      processingTimeMs: processingTime,
     });
 
     // Prepare response
@@ -370,14 +402,16 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       status: refundResult.status,
       businessAdjustment: refundResult.businessAdjustment,
       platformFeeRefund: refundResult.platformFeeRefund,
-      expectedRefundDate: new Date(Date.now() + (5 * 24 * 60 * 60 * 1000)) // 5-7 business days
+      expectedRefundDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5-7 business days
     };
 
-    return success(response, 'Refund processed successfully. It may take 5-7 business days to appear on the original payment method.');
-
+    return success(
+      response,
+      'Refund processed successfully. It may take 5-7 business days to appear on the original payment method.'
+    );
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
+
     // Enhanced error handling
     if (error instanceof PaymentValidationError) {
       await auditLogger({
@@ -387,7 +421,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: event.requestContext.authorizer?.userId || '',
         correlationId,
         success: false,
-        error: error.message
+        error: error.message,
       });
       return badRequest(error.message);
     }
@@ -400,11 +434,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: event.requestContext.authorizer?.userId || '',
         correlationId,
         success: false,
-        error: error.message
+        error: error.message,
       });
-      
+
       return internalServerError(
-        error.retryable 
+        error.retryable
           ? 'Payment service temporarily unavailable. Please try again.'
           : 'Refund processing failed. Please contact support.'
       );
@@ -418,7 +452,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         userId: event.requestContext.authorizer?.userId || '',
         correlationId,
         success: false,
-        error: error.message
+        error: error.message,
       });
       return internalServerError(error.message);
     }
@@ -431,7 +465,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       processingTimeMs: processingTime,
       userId: event.requestContext.authorizer?.userId,
       requestBody: requestBody || 'Failed to parse',
-      paymentIntentId: requestBody?.paymentIntentId
+      paymentIntentId: requestBody?.paymentIntentId,
     });
 
     await auditLogger({
@@ -441,9 +475,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       userId: event.requestContext.authorizer?.userId || '',
       correlationId,
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
 
-    return internalServerError('An unexpected error occurred. Please try again or contact support.');
+    return internalServerError(
+      'An unexpected error occurred. Please try again or contact support.'
+    );
   }
 };
