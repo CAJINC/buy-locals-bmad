@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig-base.json",
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["ES2017"],
+    "module": "ESNext",
+    "jsx": "react-native",
+    "moduleResolution": "node",
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*",
+    "index.js"
+  ]
+}

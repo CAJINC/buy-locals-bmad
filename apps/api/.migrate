@@ -1,0 +1,10 @@
+{
+  "database-url-var": "DATABASE_URL",
+  "migrations-dir": "migrations",
+  "migrations-table": "pgmigrations",
+  "schema": "public",
+  "ignore-pattern": ".*\\.map",
+  "migration-file-language": "sql",
+  "migration-filename-format": "timestamp",
+  "create-migration-file-extension": "sql"
+}

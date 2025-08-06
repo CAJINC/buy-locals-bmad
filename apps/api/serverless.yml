@@ -1,0 +1,187 @@
+service: buy-locals-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    DATABASE_URL: ${env:DATABASE_URL}
+    REDIS_URL: ${env:REDIS_URL}
+    JWT_SECRET: ${env:JWT_SECRET}
+    CORS_ORIGIN: ${env:CORS_ORIGIN}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+        - s3:DeleteObject
+      Resource: "arn:aws:s3:::buy-locals-${self:provider.stage}/*"
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+        - ses:SendRawEmail
+      Resource: "*"
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+functions:
+  # Health check
+  health:
+    handler: src/functions/health.handler
+    events:
+      - http:
+          path: health
+          method: get
+          cors: true
+
+  # Auth functions
+  authLogin:
+    handler: src/functions/auth/login.handler
+    events:
+      - http:
+          path: auth/login
+          method: post
+          cors: true
+
+  authRegister:
+    handler: src/functions/auth/register.handler
+    events:
+      - http:
+          path: auth/register
+          method: post
+          cors: true
+
+  authRefresh:
+    handler: src/functions/auth/refresh.handler
+    events:
+      - http:
+          path: auth/refresh
+          method: post
+          cors: true
+
+  authLogout:
+    handler: src/functions/auth/logout.handler
+    events:
+      - http:
+          path: auth/logout
+          method: post
+          cors: true
+
+  authForgotPassword:
+    handler: src/functions/auth/forgotPassword.handler
+    events:
+      - http:
+          path: auth/forgot-password
+          method: post
+          cors: true
+
+  authResetPassword:
+    handler: src/functions/auth/resetPassword.handler
+    events:
+      - http:
+          path: auth/reset-password
+          method: post
+          cors: true
+
+  authVerifyEmail:
+    handler: src/functions/auth/verifyEmail.handler
+    events:
+      - http:
+          path: auth/verify-email
+          method: post
+          cors: true
+
+  authSocialLogin:
+    handler: src/functions/auth/socialLogin.handler
+    events:
+      - http:
+          path: auth/google
+          method: get
+          cors: true
+      - http:
+          path: auth/google/callback
+          method: get
+          cors: true
+      - http:
+          path: auth/facebook
+          method: get
+          cors: true
+      - http:
+          path: auth/facebook/callback
+          method: get
+          cors: true
+      - http:
+          path: auth/link-social
+          method: post
+          cors: true
+
+  # User functions
+  userProfile:
+    handler: src/functions/user/profile.handler
+    events:
+      - http:
+          path: user/profile
+          method: get
+          cors: true
+      - http:
+          path: user/profile
+          method: put
+          cors: true
+
+  # Business functions
+  businessCreate:
+    handler: src/functions/business/create.handler
+    events:
+      - http:
+          path: business
+          method: post
+          cors: true
+
+  businessList:
+    handler: src/functions/business/list.handler
+    events:
+      - http:
+          path: business
+          method: get
+          cors: true
+
+  businessGet:
+    handler: src/functions/business/get.handler
+    events:
+      - http:
+          path: business/{id}
+          method: get
+          cors: true
+
+  businessUpdate:
+    handler: src/functions/business/update.handler
+    events:
+      - http:
+          path: business/{id}
+          method: put
+          cors: true
+
+  businessMedia:
+    handler: src/functions/business/media.handler
+    events:
+      - http:
+          path: business/{id}/media
+          method: post
+          cors: true
+      - http:
+          path: business/{id}/media/{mediaId}
+          method: delete
+          cors: true
+
+  # Booking functions will be added later
+
+custom:
+  serverless-offline:
+    httpPort: 3003
+    host: 0.0.0.0
