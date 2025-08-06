@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { pool } from '../config/database.js';
 import { errorResponse, successResponse } from '../utils/responseUtils.js';
 
-export const healthHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const healthHandler = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     // Check database connection
     const dbCheck = await pool.query('SELECT 1');

@@ -7,9 +7,9 @@ export interface LocationSearchMetrics {
   errorRate: number;
   performanceDistribution: {
     excellent: number; // <50ms
-    good: number;      // 50-200ms
+    good: number; // 50-200ms
     acceptable: number; // 200-500ms
-    poor: number;      // >500ms
+    poor: number; // >500ms
   };
   popularSearchAreas: Array<{
     lat: number;
@@ -44,7 +44,7 @@ class LocationMonitoringService {
     maxExecutionTimeMs: 1000,
     minCacheHitRate: 0.7,
     maxErrorRate: 0.05,
-    maxConcurrentSearches: 100
+    maxConcurrentSearches: 100,
   };
 
   /**
@@ -74,26 +74,26 @@ class LocationMonitoringService {
         // Total searches counter
         redisClient.incr(`${this.METRICS_PREFIX}:total_searches:${date}`),
         redisClient.incr(`${this.METRICS_PREFIX}:total_searches:${date}:${hour}`),
-        
+
         // Execution time tracking
         redisClient.lpush(
           `${this.METRICS_PREFIX}:execution_times:${date}`,
           executionTimeMs.toString()
         ),
-        
+
         // Cache hit tracking
         redisClient.incr(
           `${this.METRICS_PREFIX}:${cacheHit ? 'cache_hits' : 'cache_misses'}:${date}`
         ),
-        
+
         // Error tracking
         error && redisClient.incr(`${this.METRICS_PREFIX}:errors:${date}`),
-        
+
         // Popular search locations
         this.recordPopularLocation(searchParams.lat, searchParams.lng, searchParams.radius || 25),
-        
+
         // Performance distribution
-        this.recordPerformanceBucket(executionTimeMs, date)
+        this.recordPerformanceBucket(executionTimeMs, date),
       ];
 
       await Promise.all(promises.filter(Boolean));
@@ -104,7 +104,7 @@ class LocationMonitoringService {
         redisClient.expire(`${this.METRICS_PREFIX}:execution_times:${date}`, 30 * 24 * 3600),
         redisClient.expire(`${this.METRICS_PREFIX}:cache_hits:${date}`, 30 * 24 * 3600),
         redisClient.expire(`${this.METRICS_PREFIX}:cache_misses:${date}`, 30 * 24 * 3600),
-        redisClient.expire(`${this.METRICS_PREFIX}:errors:${date}`, 30 * 24 * 3600)
+        redisClient.expire(`${this.METRICS_PREFIX}:errors:${date}`, 30 * 24 * 3600),
       ]);
 
       // Check if we need to trigger alerts
@@ -112,9 +112,8 @@ class LocationMonitoringService {
         executionTimeMs,
         cacheHit,
         error,
-        timestamp
+        timestamp,
       });
-
     } catch (monitoringError) {
       console.error('Failed to record search metrics:', monitoringError);
       // Don't let monitoring errors affect the main functionality
@@ -126,7 +125,7 @@ class LocationMonitoringService {
    */
   private async recordPerformanceBucket(executionTimeMs: number, date: string): Promise<void> {
     let bucket: string;
-    
+
     if (executionTimeMs < 50) {
       bucket = 'excellent';
     } else if (executionTimeMs < 200) {
@@ -150,9 +149,9 @@ class LocationMonitoringService {
       const roundedLat = Math.round(lat * 100) / 100; // ~1km precision
       const roundedLng = Math.round(lng * 100) / 100;
       const locationKey = `${roundedLat},${roundedLng}`;
-      
+
       const date = new Date().toISOString().split('T')[0];
-      
+
       await Promise.all([
         redisClient.zincrby(`${this.METRICS_PREFIX}:popular_locations:${date}`, 1, locationKey),
         redisClient.hset(
@@ -161,7 +160,7 @@ class LocationMonitoringService {
           radius.toString()
         ),
         redisClient.expire(`${this.METRICS_PREFIX}:popular_locations:${date}`, 30 * 24 * 3600),
-        redisClient.expire(`${this.METRICS_PREFIX}:location_radii:${date}`, 30 * 24 * 3600)
+        redisClient.expire(`${this.METRICS_PREFIX}:location_radii:${date}`, 30 * 24 * 3600),
       ]);
     } catch (error) {
       console.error('Failed to record popular location:', error);
@@ -209,7 +208,7 @@ class LocationMonitoringService {
       excellent: 0,
       good: 0,
       acceptable: 0,
-      poor: 0
+      poor: 0,
     };
     const locationCounts = new Map<string, number>();
 
@@ -233,17 +232,15 @@ class LocationMonitoringService {
     }
 
     // Calculate derived metrics
-    const averageExecutionTime = totalExecutionSamples > 0 
-      ? totalExecutionTime / totalExecutionSamples 
-      : 0;
-    
-    const cacheHitRate = (totalCacheHits + totalCacheMisses) > 0
-      ? totalCacheHits / (totalCacheHits + totalCacheMisses)
-      : 0;
-    
-    const errorRate = totalSearches > 0
-      ? totalErrors / totalSearches
-      : 0;
+    const averageExecutionTime =
+      totalExecutionSamples > 0 ? totalExecutionTime / totalExecutionSamples : 0;
+
+    const cacheHitRate =
+      totalCacheHits + totalCacheMisses > 0
+        ? totalCacheHits / (totalCacheHits + totalCacheMisses)
+        : 0;
+
+    const errorRate = totalSearches > 0 ? totalErrors / totalSearches : 0;
 
     // Top popular search areas
     const popularSearchAreas = Array.from(locationCounts.entries())
@@ -255,7 +252,7 @@ class LocationMonitoringService {
           lat,
           lng,
           count,
-          averageRadius: 25 // Default, could be calculated from stored radii
+          averageRadius: 25, // Default, could be calculated from stored radii
         };
       });
 
@@ -265,7 +262,7 @@ class LocationMonitoringService {
       cacheHitRate,
       errorRate,
       performanceDistribution,
-      popularSearchAreas
+      popularSearchAreas,
     };
   }
 
@@ -298,23 +295,42 @@ class LocationMonitoringService {
         perfGood,
         perfAcceptable,
         perfPoor,
-        popularLocations
+        popularLocations,
       ] = await Promise.all([
-        redisClient.get(`${this.METRICS_PREFIX}:total_searches:${date}`).then(val => parseInt(val || '0')),
+        redisClient
+          .get(`${this.METRICS_PREFIX}:total_searches:${date}`)
+          .then(val => parseInt(val || '0')),
         redisClient.lrange(`${this.METRICS_PREFIX}:execution_times:${date}`, 0, -1),
-        redisClient.get(`${this.METRICS_PREFIX}:cache_hits:${date}`).then(val => parseInt(val || '0')),
-        redisClient.get(`${this.METRICS_PREFIX}:cache_misses:${date}`).then(val => parseInt(val || '0')),
+        redisClient
+          .get(`${this.METRICS_PREFIX}:cache_hits:${date}`)
+          .then(val => parseInt(val || '0')),
+        redisClient
+          .get(`${this.METRICS_PREFIX}:cache_misses:${date}`)
+          .then(val => parseInt(val || '0')),
         redisClient.get(`${this.METRICS_PREFIX}:errors:${date}`).then(val => parseInt(val || '0')),
-        redisClient.get(`${this.METRICS_PREFIX}:perf_excellent:${date}`).then(val => parseInt(val || '0')),
-        redisClient.get(`${this.METRICS_PREFIX}:perf_good:${date}`).then(val => parseInt(val || '0')),
-        redisClient.get(`${this.METRICS_PREFIX}:perf_acceptable:${date}`).then(val => parseInt(val || '0')),
-        redisClient.get(`${this.METRICS_PREFIX}:perf_poor:${date}`).then(val => parseInt(val || '0')),
-        redisClient.zrevrange(`${this.METRICS_PREFIX}:popular_locations:${date}`, 0, 9, 'WITHSCORES')
+        redisClient
+          .get(`${this.METRICS_PREFIX}:perf_excellent:${date}`)
+          .then(val => parseInt(val || '0')),
+        redisClient
+          .get(`${this.METRICS_PREFIX}:perf_good:${date}`)
+          .then(val => parseInt(val || '0')),
+        redisClient
+          .get(`${this.METRICS_PREFIX}:perf_acceptable:${date}`)
+          .then(val => parseInt(val || '0')),
+        redisClient
+          .get(`${this.METRICS_PREFIX}:perf_poor:${date}`)
+          .then(val => parseInt(val || '0')),
+        redisClient.zrevrange(
+          `${this.METRICS_PREFIX}:popular_locations:${date}`,
+          0,
+          9,
+          'WITHSCORES'
+        ),
       ]);
 
       const totalExecutionTime = executionTimes.reduce((sum, time) => sum + parseInt(time), 0);
       const popularLocationsMap = new Map<string, number>();
-      
+
       for (let i = 0; i < popularLocations.length; i += 2) {
         const location = popularLocations[i];
         const count = parseInt(popularLocations[i + 1]);
@@ -332,9 +348,9 @@ class LocationMonitoringService {
           excellent: perfExcellent,
           good: perfGood,
           acceptable: perfAcceptable,
-          poor: perfPoor
+          poor: perfPoor,
         },
-        popularLocations: popularLocationsMap
+        popularLocations: popularLocationsMap,
       };
     } catch (error) {
       console.error(`Failed to get metrics for date ${date}:`, error);
@@ -346,7 +362,7 @@ class LocationMonitoringService {
         cacheMisses: 0,
         errors: 0,
         performanceDistribution: { excellent: 0, good: 0, acceptable: 0, poor: 0 },
-        popularLocations: new Map()
+        popularLocations: new Map(),
       };
     }
   }
@@ -360,7 +376,7 @@ class LocationMonitoringService {
     error: boolean;
     timestamp: number;
   }): Promise<void> {
-    const { executionTimeMs, cacheHit, error, timestamp } = params;
+    const { executionTimeMs, error, timestamp } = params;
 
     // Performance alert
     if (executionTimeMs > this.THRESHOLDS.maxExecutionTimeMs) {
@@ -369,7 +385,7 @@ class LocationMonitoringService {
         severity: executionTimeMs > 2000 ? 'high' : 'medium',
         title: 'Location Search Performance Degraded',
         description: `Search execution time ${executionTimeMs}ms exceeds threshold ${this.THRESHOLDS.maxExecutionTimeMs}ms`,
-        metadata: { executionTimeMs, threshold: this.THRESHOLDS.maxExecutionTimeMs }
+        metadata: { executionTimeMs, threshold: this.THRESHOLDS.maxExecutionTimeMs },
       });
     }
 
@@ -380,7 +396,7 @@ class LocationMonitoringService {
         severity: 'medium',
         title: 'Location Search Error',
         description: 'Location search request failed',
-        metadata: { timestamp }
+        metadata: { timestamp },
       });
     }
 
@@ -396,37 +412,46 @@ class LocationMonitoringService {
       const recentMetrics = await this.getLocationSearchMetrics(1); // Last day
 
       // Cache hit rate alert
-      if (recentMetrics.cacheHitRate < this.THRESHOLDS.minCacheHitRate && recentMetrics.totalSearches > 10) {
+      if (
+        recentMetrics.cacheHitRate < this.THRESHOLDS.minCacheHitRate &&
+        recentMetrics.totalSearches > 10
+      ) {
         await this.createAlert({
           type: 'cache',
           severity: 'medium',
           title: 'Low Cache Hit Rate',
-          description: `Cache hit rate ${(recentMetrics.cacheHitRate * 100).toFixed(1)}% is below threshold ${(this.THRESHOLDS.minCacheHitRate * 100)}%`,
-          metadata: { 
+          description: `Cache hit rate ${(recentMetrics.cacheHitRate * 100).toFixed(1)}% is below threshold ${this.THRESHOLDS.minCacheHitRate * 100}%`,
+          metadata: {
             cacheHitRate: recentMetrics.cacheHitRate,
             threshold: this.THRESHOLDS.minCacheHitRate,
-            totalSearches: recentMetrics.totalSearches
-          }
+            totalSearches: recentMetrics.totalSearches,
+          },
         });
       }
 
       // Error rate alert
-      if (recentMetrics.errorRate > this.THRESHOLDS.maxErrorRate && recentMetrics.totalSearches > 10) {
+      if (
+        recentMetrics.errorRate > this.THRESHOLDS.maxErrorRate &&
+        recentMetrics.totalSearches > 10
+      ) {
         await this.createAlert({
           type: 'error',
           severity: recentMetrics.errorRate > 0.1 ? 'high' : 'medium',
           title: 'High Error Rate',
-          description: `Error rate ${(recentMetrics.errorRate * 100).toFixed(1)}% is above threshold ${(this.THRESHOLDS.maxErrorRate * 100)}%`,
+          description: `Error rate ${(recentMetrics.errorRate * 100).toFixed(1)}% is above threshold ${this.THRESHOLDS.maxErrorRate * 100}%`,
           metadata: {
             errorRate: recentMetrics.errorRate,
             threshold: this.THRESHOLDS.maxErrorRate,
-            totalSearches: recentMetrics.totalSearches
-          }
+            totalSearches: recentMetrics.totalSearches,
+          },
         });
       }
 
       // Average performance alert
-      if (recentMetrics.averageExecutionTime > this.THRESHOLDS.maxExecutionTimeMs && recentMetrics.totalSearches > 10) {
+      if (
+        recentMetrics.averageExecutionTime > this.THRESHOLDS.maxExecutionTimeMs &&
+        recentMetrics.totalSearches > 10
+      ) {
         await this.createAlert({
           type: 'performance',
           severity: 'medium',
@@ -435,11 +460,10 @@ class LocationMonitoringService {
           metadata: {
             averageExecutionTime: recentMetrics.averageExecutionTime,
             threshold: this.THRESHOLDS.maxExecutionTimeMs,
-            totalSearches: recentMetrics.totalSearches
-          }
+            totalSearches: recentMetrics.totalSearches,
+          },
         });
       }
-
     } catch (error) {
       console.error('Failed to check aggregated alerts:', error);
     }
@@ -448,13 +472,15 @@ class LocationMonitoringService {
   /**
    * Create an alert
    */
-  private async createAlert(alert: Omit<LocationAlert, 'id' | 'timestamp' | 'resolved'>): Promise<void> {
+  private async createAlert(
+    alert: Omit<LocationAlert, 'id' | 'timestamp' | 'resolved'>
+  ): Promise<void> {
     try {
       const alertWithId: LocationAlert = {
         ...alert,
         id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: new Date().toISOString(),
-        resolved: false
+        resolved: false,
       };
 
       // Store alert in Redis
@@ -465,11 +491,7 @@ class LocationMonitoringService {
       );
 
       // Add to alerts timeline
-      await redisClient.zadd(
-        `${this.ALERTS_PREFIX}:timeline`,
-        Date.now(),
-        alertWithId.id
-      );
+      await redisClient.zadd(`${this.ALERTS_PREFIX}:timeline`, Date.now(), alertWithId.id);
 
       // Set TTL on timeline (keep for 90 days)
       await redisClient.expire(`${this.ALERTS_PREFIX}:timeline`, 90 * 24 * 3600);
@@ -480,7 +502,7 @@ class LocationMonitoringService {
         type: alert.type,
         severity: alert.severity,
         title: alert.title,
-        description: alert.description
+        description: alert.description,
       });
 
       // In production, this would integrate with alerting systems like:
@@ -489,7 +511,6 @@ class LocationMonitoringService {
       // - Email alerts
       // - DataDog alerts
       await this.sendToExternalAlertingSystems(alertWithId);
-
     } catch (error) {
       console.error('Failed to create alert:', error);
     }
@@ -501,7 +522,7 @@ class LocationMonitoringService {
   private async sendToExternalAlertingSystems(alert: LocationAlert): Promise<void> {
     // This would integrate with your alerting infrastructure
     // For now, we'll just log the alert
-    
+
     if (alert.severity === 'high' || alert.severity === 'critical') {
       // High severity alerts would trigger immediate notifications
       console.error('HIGH SEVERITY ALERT:', alert);
@@ -524,7 +545,7 @@ class LocationMonitoringService {
       if (!redisClient.isReady) return [];
 
       const alertData = await redisClient.hgetall(`${this.ALERTS_PREFIX}:active`);
-      
+
       return Object.values(alertData)
         .map(data => JSON.parse(data) as LocationAlert)
         .filter(alert => !alert.resolved)
@@ -548,11 +569,7 @@ class LocationMonitoringService {
       const alert: LocationAlert = JSON.parse(alertData);
       alert.resolved = true;
 
-      await redisClient.hset(
-        `${this.ALERTS_PREFIX}:active`,
-        alertId,
-        JSON.stringify(alert)
-      );
+      await redisClient.hset(`${this.ALERTS_PREFIX}:active`, alertId, JSON.stringify(alert));
 
       return true;
     } catch (error) {
@@ -574,9 +591,9 @@ class LocationMonitoringService {
         excellent: 0,
         good: 0,
         acceptable: 0,
-        poor: 0
+        poor: 0,
       },
-      popularSearchAreas: []
+      popularSearchAreas: [],
     };
   }
 }

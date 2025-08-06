@@ -13,7 +13,7 @@ describe('Rate Limiting Middleware', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockReq = {
       ip: '192.168.1.1',
       headers: {},
@@ -93,7 +93,7 @@ describe('Rate Limiting Middleware', () => {
       const rateLimit = createRateLimit({
         windowMs: 60000,
         maxRequests: 5,
-        keyGenerator: (req) => `user:${req.headers['user-id']}`,
+        keyGenerator: req => `user:${req.headers['user-id']}`,
       });
 
       mockReq.headers!['user-id'] = 'user123';
@@ -102,7 +102,11 @@ describe('Rate Limiting Middleware', () => {
       await rateLimit(mockReq as Request, mockRes as Response, mockNext);
 
       // Verify Redis operations used the custom key
-      expect(mockRedisClient.zRemRangeByScore).toHaveBeenCalledWith('rate_limit:user:user123', expect.any(Number), expect.any(Number));
+      expect(mockRedisClient.zRemRangeByScore).toHaveBeenCalledWith(
+        'rate_limit:user:user123',
+        expect.any(Number),
+        expect.any(Number)
+      );
       expect(mockNext).toHaveBeenCalled();
     });
 
@@ -129,17 +133,15 @@ describe('Rate Limiting Middleware', () => {
       mockRedisClient.zCard.mockResolvedValue(1);
 
       // Mock response status tracking
-      let responseStatus = 200;
       const originalStatus = mockRes.status;
-      mockRes.status = jest.fn((code) => {
-        responseStatus = code;
+      mockRes.status = jest.fn(code => {
         return originalStatus?.call(mockRes, code);
       });
 
       await rateLimit(mockReq as Request, mockRes as Response, mockNext);
 
       // Simulate successful response
-      const mockJsonSpy = jest.spyOn(mockRes, 'json' as any);
+      jest.spyOn(mockRes, 'json' as any);
       mockRes.json!({ success: true });
 
       expect(mockNext).toHaveBeenCalled();
@@ -169,7 +171,11 @@ describe('Rate Limiting Middleware', () => {
         expect(result.attempts).toBe(5);
         expect(result.isLocked).toBe(true);
         expect(result.lockoutExpires).toBeInstanceOf(Date);
-        expect(mockRedisClient.setEx).toHaveBeenCalledWith('lockout:test@example.com', 1800, 'locked');
+        expect(mockRedisClient.setEx).toHaveBeenCalledWith(
+          'lockout:test@example.com',
+          1800,
+          'locked'
+        );
         expect(mockRedisClient.del).toHaveBeenCalledWith('attempts:test@example.com');
       });
 
@@ -235,8 +241,7 @@ describe('Rate Limiting Middleware', () => {
       it('should handle Redis errors gracefully', async () => {
         mockRedisClient.del.mockRejectedValue(new Error('Redis error'));
 
-        await expect(AccountLockout.clearFailedAttempts('test@example.com'))
-          .resolves.not.toThrow();
+        await expect(AccountLockout.clearFailedAttempts('test@example.com')).resolves.not.toThrow();
       });
     });
 
@@ -251,8 +256,9 @@ describe('Rate Limiting Middleware', () => {
       it('should throw error on Redis failure', async () => {
         mockRedisClient.del.mockRejectedValue(new Error('Redis error'));
 
-        await expect(AccountLockout.unlockAccount('test@example.com'))
-          .rejects.toThrow('Failed to unlock account');
+        await expect(AccountLockout.unlockAccount('test@example.com')).rejects.toThrow(
+          'Failed to unlock account'
+        );
       });
     });
   });

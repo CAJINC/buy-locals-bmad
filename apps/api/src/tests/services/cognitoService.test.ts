@@ -2,9 +2,6 @@ import { CognitoService } from '../../services/cognitoService';
 import { CreateUserRequest } from '@buy-locals/shared';
 import {
   AdminCreateUserCommand,
-  AdminGetUserCommand,
-  AdminInitiateAuthCommand,
-  AdminSetUserPasswordCommand,
   CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 
@@ -18,12 +15,14 @@ describe('CognitoService', () => {
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
-    
+
     // Create service instance
     cognitoService = new CognitoService();
-    
+
     // Mock the client
-    mockCognitoClient = new CognitoIdentityProviderClient({}) as jest.Mocked<CognitoIdentityProviderClient>;
+    mockCognitoClient = new CognitoIdentityProviderClient(
+      {}
+    ) as jest.Mocked<CognitoIdentityProviderClient>;
     (CognitoIdentityProviderClient as jest.Mock).mockImplementation(() => mockCognitoClient);
   });
 
@@ -39,8 +38,9 @@ describe('CognitoService', () => {
     it('should successfully register a user', async () => {
       // Mock successful responses
       mockCognitoClient.send
-        .mockResolvedValueOnce({ // AdminCreateUserCommand
-          User: { Username: 'test@example.com' }
+        .mockResolvedValueOnce({
+          // AdminCreateUserCommand
+          User: { Username: 'test@example.com' },
         })
         .mockResolvedValueOnce({}); // AdminSetUserPasswordCommand
 
@@ -54,8 +54,9 @@ describe('CognitoService', () => {
     it('should handle registration errors', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('User already exists'));
 
-      await expect(cognitoService.registerUser(mockUserData))
-        .rejects.toThrow('Failed to register user');
+      await expect(cognitoService.registerUser(mockUserData)).rejects.toThrow(
+        'Failed to register user'
+      );
     });
 
     it('should set correct user attributes', async () => {
@@ -82,7 +83,7 @@ describe('CognitoService', () => {
           AccessToken: 'mock-access-token',
           RefreshToken: 'mock-refresh-token',
           IdToken: 'mock-id-token',
-        }
+        },
       };
 
       mockCognitoClient.send.mockResolvedValue(mockAuthResult);
@@ -97,15 +98,17 @@ describe('CognitoService', () => {
     it('should handle login errors', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('Invalid credentials'));
 
-      await expect(cognitoService.loginUser('test@example.com', 'wrongpassword'))
-        .rejects.toThrow('Invalid credentials');
+      await expect(cognitoService.loginUser('test@example.com', 'wrongpassword')).rejects.toThrow(
+        'Invalid credentials'
+      );
     });
 
     it('should handle missing authentication result', async () => {
       mockCognitoClient.send.mockResolvedValue({});
 
-      await expect(cognitoService.loginUser('test@example.com', 'password'))
-        .rejects.toThrow('Authentication failed');
+      await expect(cognitoService.loginUser('test@example.com', 'password')).rejects.toThrow(
+        'Authentication failed'
+      );
     });
   });
 
@@ -115,7 +118,7 @@ describe('CognitoService', () => {
         AuthenticationResult: {
           AccessToken: 'new-access-token',
           IdToken: 'new-id-token',
-        }
+        },
       };
 
       mockCognitoClient.send.mockResolvedValue(mockAuthResult);
@@ -129,8 +132,9 @@ describe('CognitoService', () => {
     it('should handle refresh errors', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('Invalid refresh token'));
 
-      await expect(cognitoService.refreshToken('invalid-token'))
-        .rejects.toThrow('Failed to refresh token');
+      await expect(cognitoService.refreshToken('invalid-token')).rejects.toThrow(
+        'Failed to refresh token'
+      );
     });
   });
 
@@ -164,8 +168,9 @@ describe('CognitoService', () => {
     it('should handle user not found', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('UserNotFoundException'));
 
-      await expect(cognitoService.getUser('nonexistent@example.com'))
-        .rejects.toThrow('User not found');
+      await expect(cognitoService.getUser('nonexistent@example.com')).rejects.toThrow(
+        'User not found'
+      );
     });
   });
 
@@ -173,11 +178,13 @@ describe('CognitoService', () => {
     it('should successfully update user profile', async () => {
       mockCognitoClient.send.mockResolvedValue({});
 
-      await expect(cognitoService.updateUserProfile('test@example.com', {
-        firstName: 'Jane',
-        lastName: 'Smith',
-        phone: '+1234567890',
-      })).resolves.not.toThrow();
+      await expect(
+        cognitoService.updateUserProfile('test@example.com', {
+          firstName: 'Jane',
+          lastName: 'Smith',
+          phone: '+1234567890',
+        })
+      ).resolves.not.toThrow();
 
       expect(mockCognitoClient.send).toHaveBeenCalledTimes(1);
     });
@@ -185,9 +192,11 @@ describe('CognitoService', () => {
     it('should handle update errors', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('User not found'));
 
-      await expect(cognitoService.updateUserProfile('test@example.com', {
-        firstName: 'Jane',
-      })).rejects.toThrow('Failed to update profile');
+      await expect(
+        cognitoService.updateUserProfile('test@example.com', {
+          firstName: 'Jane',
+        })
+      ).rejects.toThrow('Failed to update profile');
     });
   });
 
@@ -195,8 +204,7 @@ describe('CognitoService', () => {
     it('should successfully initiate password reset', async () => {
       mockCognitoClient.send.mockResolvedValue({});
 
-      await expect(cognitoService.forgotPassword('test@example.com'))
-        .resolves.not.toThrow();
+      await expect(cognitoService.forgotPassword('test@example.com')).resolves.not.toThrow();
 
       expect(mockCognitoClient.send).toHaveBeenCalledTimes(1);
     });
@@ -204,8 +212,9 @@ describe('CognitoService', () => {
     it('should handle forgot password errors', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('User not found'));
 
-      await expect(cognitoService.forgotPassword('test@example.com'))
-        .rejects.toThrow('Failed to initiate password reset');
+      await expect(cognitoService.forgotPassword('test@example.com')).rejects.toThrow(
+        'Failed to initiate password reset'
+      );
     });
   });
 
@@ -213,8 +222,9 @@ describe('CognitoService', () => {
     it('should successfully confirm password reset', async () => {
       mockCognitoClient.send.mockResolvedValue({});
 
-      await expect(cognitoService.confirmForgotPassword('test@example.com', '123456', 'NewPass123!'))
-        .resolves.not.toThrow();
+      await expect(
+        cognitoService.confirmForgotPassword('test@example.com', '123456', 'NewPass123!')
+      ).resolves.not.toThrow();
 
       expect(mockCognitoClient.send).toHaveBeenCalledTimes(1);
     });
@@ -222,8 +232,9 @@ describe('CognitoService', () => {
     it('should handle confirm password errors', async () => {
       mockCognitoClient.send.mockRejectedValue(new Error('Invalid code'));
 
-      await expect(cognitoService.confirmForgotPassword('test@example.com', '123456', 'NewPass123!'))
-        .rejects.toThrow('Failed to reset password');
+      await expect(
+        cognitoService.confirmForgotPassword('test@example.com', '123456', 'NewPass123!')
+      ).rejects.toThrow('Failed to reset password');
     });
   });
 });

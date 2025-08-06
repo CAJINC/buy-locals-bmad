@@ -28,25 +28,26 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: S3_CONFIG.maxFileSize,
-    files: 1 // One file at a time
+    files: 1, // One file at a time
   },
   fileFilter: (req, file, cb) => {
     const validation = mediaService.validateMediaFile({
       size: 0, // Size will be checked by multer limits
       mimetype: file.mimetype,
-      originalname: file.originalname
+      originalname: file.originalname,
     });
-    
+
     if (validation.isValid) {
       cb(null, true);
     } else {
       cb(new Error(validation.errors.join(', ')));
     }
-  }
+  },
 });
 
 // POST /businesses/{businessId}/media - Upload business media
-app.post('/businesses/:businessId/media',
+app.post(
+  '/businesses/:businessId/media',
   authenticateToken,
   validateParams(businessIdParamSchema),
   upload.single('media'),
@@ -72,14 +73,16 @@ app.post('/businesses/:businessId/media',
       // Verify business ownership
       const business = await businessService.getBusinessById(businessId);
       if (business.owner_id !== userId) {
-        return res.status(403).json({ error: 'Access denied: You can only upload media to your own business' });
+        return res
+          .status(403)
+          .json({ error: 'Access denied: You can only upload media to your own business' });
       }
 
       // Check if business already has max photos
       const currentMediaCount = business.media?.length || 0;
       if (type === 'photo' && currentMediaCount >= S3_CONFIG.maxPhotosPerBusiness) {
-        return res.status(400).json({ 
-          error: `Maximum ${S3_CONFIG.maxPhotosPerBusiness} photos allowed per business` 
+        return res.status(400).json({
+          error: `Maximum ${S3_CONFIG.maxPhotosPerBusiness} photos allowed per business`,
         });
       }
 
@@ -87,7 +90,7 @@ app.post('/businesses/:businessId/media',
       const validation = mediaService.validateMediaFile({
         size: req.file.size,
         mimetype: req.file.mimetype,
-        originalname: req.file.originalname
+        originalname: req.file.originalname,
       });
 
       if (!validation.isValid) {
@@ -112,10 +115,9 @@ app.post('/businesses/:businessId/media',
           mediaId: signedUrl.mediaId,
           expiresAt: signedUrl.expiresAt,
           type,
-          description
-        }
+          description,
+        },
       });
-
     } catch (error) {
       next(error);
     }
@@ -123,7 +125,8 @@ app.post('/businesses/:businessId/media',
 );
 
 // POST /businesses/{businessId}/media/process - Process uploaded media
-app.post('/businesses/:businessId/media/process',
+app.post(
+  '/businesses/:businessId/media/process',
   authenticateToken,
   validateParams(businessIdParamSchema),
   async (req: AuthenticatedRequest, res, next) => {
@@ -143,25 +146,32 @@ app.post('/businesses/:businessId/media/process',
       }
 
       // Process the uploaded media
-      const mediaItem = await mediaService.processUploadedMedia(businessId, mediaId, type, description);
+      const mediaItem = await mediaService.processUploadedMedia(
+        businessId,
+        mediaId,
+        type,
+        description
+      );
 
       // Update business media array
       const currentMedia = business.media || [];
-      const updatedMedia = [...currentMedia, {
-        id: mediaItem.id,
-        url: mediaItem.mediumUrl,
-        type: mediaItem.type,
-        description: mediaItem.description
-      }];
+      const updatedMedia = [
+        ...currentMedia,
+        {
+          id: mediaItem.id,
+          url: mediaItem.mediumUrl,
+          type: mediaItem.type,
+          description: mediaItem.description,
+        },
+      ];
 
       await businessService.updateBusiness(businessId, userId, { media: updatedMedia });
 
       res.status(201).json({
         success: true,
         message: 'Media uploaded and processed successfully',
-        media: mediaItem
+        media: mediaItem,
       });
-
     } catch (error) {
       next(error);
     }
@@ -169,7 +179,8 @@ app.post('/businesses/:businessId/media/process',
 );
 
 // DELETE /businesses/{businessId}/media/{mediaId} - Delete business media
-app.delete('/businesses/:businessId/media/:mediaId',
+app.delete(
+  '/businesses/:businessId/media/:mediaId',
   authenticateToken,
   validateParams(businessIdParamSchema),
   async (req: AuthenticatedRequest, res, next) => {
@@ -190,7 +201,7 @@ app.delete('/businesses/:businessId/media/:mediaId',
       // Find media item in business
       const currentMedia = business.media || [];
       const mediaToDelete = currentMedia.find(m => m.id === mediaId);
-      
+
       if (!mediaToDelete) {
         return res.status(404).json({ error: 'Media not found' });
       }
@@ -204,9 +215,8 @@ app.delete('/businesses/:businessId/media/:mediaId',
 
       res.json({
         success: true,
-        message: 'Media deleted successfully'
+        message: 'Media deleted successfully',
       });
-
     } catch (error) {
       next(error);
     }
@@ -214,7 +224,8 @@ app.delete('/businesses/:businessId/media/:mediaId',
 );
 
 // GET /businesses/{businessId}/media - List business media
-app.get('/businesses/:businessId/media',
+app.get(
+  '/businesses/:businessId/media',
   validateParams(businessIdParamSchema),
   async (req, res, next) => {
     try {
@@ -225,9 +236,8 @@ app.get('/businesses/:businessId/media',
 
       res.json({
         success: true,
-        media: media.sort((a, b) => (a.type === 'logo' ? -1 : 1)) // Logo first
+        media: media.sort((a, _b) => (a.type === 'logo' ? -1 : 1)), // Logo first
       });
-
     } catch (error) {
       next(error);
     }

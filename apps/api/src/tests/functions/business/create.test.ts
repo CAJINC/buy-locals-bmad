@@ -3,6 +3,7 @@ import { handler } from '../../../functions/business/create.js';
 import { pool } from '../../../config/database.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../../../config/environment.js';
+import { GeocodingService } from '../../../services/geocodingService.js';
 
 // Mock the Google Maps API calls
 jest.mock('../../../services/geocodingService.ts', () => ({
@@ -13,11 +14,11 @@ jest.mock('../../../services/geocodingService.ts', () => ({
       state: 'NY',
       zipCode: '10001',
       country: 'US',
-      coordinates: { lat: 40.7128, lng: -74.0060 },
-      formattedAddress: '123 Main St, New York, NY 10001, USA'
+      coordinates: { lat: 40.7128, lng: -74.006 },
+      formattedAddress: '123 Main St, New York, NY 10001, USA',
     }),
-    validateCoordinates: jest.fn().mockReturnValue(true)
-  }))
+    validateCoordinates: jest.fn().mockReturnValue(true),
+  })),
 }));
 
 describe('POST /businesses', () => {
@@ -51,7 +52,7 @@ describe('POST /businesses', () => {
         address: '123 Main St',
         city: 'New York',
         state: 'NY',
-        zipCode: '10001'
+        zipCode: '10001',
       },
       categories: ['restaurant', 'food'],
       hours: {
@@ -61,21 +62,21 @@ describe('POST /businesses', () => {
         thursday: { open: '09:00', close: '21:00' },
         friday: { open: '09:00', close: '23:00' },
         saturday: { open: '10:00', close: '23:00' },
-        sunday: { closed: true }
+        sunday: { closed: true },
       },
       contact: {
         phone: '+1234567890',
         email: 'restaurant@example.com',
-        website: 'https://restaurant.example.com'
+        website: 'https://restaurant.example.com',
       },
       services: [
         {
           name: 'Dine-in',
           description: 'Restaurant dining',
-          price: 25.00,
-          duration: 90
-        }
-      ]
+          price: 25.0,
+          duration: 90,
+        },
+      ],
     };
 
     const response = await request(handler)
@@ -89,7 +90,7 @@ describe('POST /businesses', () => {
     expect(response.body.business.name).toBe(businessData.name);
     expect(response.body.business.location.coordinates).toBeDefined();
     expect(response.body.business.location.coordinates.lat).toBe(40.7128);
-    expect(response.body.business.location.coordinates.lng).toBe(-74.0060);
+    expect(response.body.business.location.coordinates.lng).toBe(-74.006);
   });
 
   it('should fail without authentication', async () => {
@@ -98,13 +99,10 @@ describe('POST /businesses', () => {
       location: { address: '123 Main St', city: 'New York', state: 'NY', zipCode: '10001' },
       categories: ['retail'],
       hours: {},
-      contact: {}
+      contact: {},
     };
 
-    await request(handler)
-      .post('/businesses')
-      .send(businessData)
-      .expect(401);
+    await request(handler).post('/businesses').send(businessData).expect(401);
   });
 
   it('should fail with invalid data', async () => {
@@ -113,7 +111,7 @@ describe('POST /businesses', () => {
       location: { address: '123 Main St', city: 'New York', state: 'NY', zipCode: '10001' },
       categories: [],
       hours: {},
-      contact: {}
+      contact: {},
     };
 
     await request(handler)
@@ -131,18 +129,20 @@ describe('POST /businesses', () => {
         city: 'New York',
         state: 'NY',
         zipCode: '10001',
-        coordinates: { lat: 91, lng: -74.0060 } // Invalid latitude
+        coordinates: { lat: 91, lng: -74.006 }, // Invalid latitude
       },
       categories: ['retail'],
       hours: {},
-      contact: {}
+      contact: {},
     };
 
     // Mock invalid coordinates
-    const mockGeocodingService = require('../../../services/geocodingService.ts');
-    mockGeocodingService.GeocodingService.mockImplementation(() => ({
-      validateCoordinates: jest.fn().mockReturnValue(false)
-    }));
+    (GeocodingService as jest.MockedClass<typeof GeocodingService>).mockImplementation(
+      () =>
+        ({
+          validateCoordinates: jest.fn().mockReturnValue(false),
+        }) as any
+    );
 
     await request(handler)
       .post('/businesses')

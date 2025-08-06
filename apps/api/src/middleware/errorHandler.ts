@@ -6,12 +6,7 @@ export interface ApiError extends Error {
   details?: string[];
 }
 
-export const errorHandler = (
-  err: ApiError,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const errorHandler = (err: ApiError, req: Request, res: Response, _next: NextFunction) => {
   // Structured logging for better observability
   const errorLog = {
     level: 'error',
@@ -35,11 +30,9 @@ export const errorHandler = (
   }
 
   const statusCode = err.statusCode || 500;
-  
+
   // Sanitize error messages - don't expose internal errors to client
-  const message = err.statusCode && err.isOperational 
-    ? err.message 
-    : 'Internal server error';
+  const message = err.statusCode && err.isOperational ? err.message : 'Internal server error';
 
   const errorResponse: any = {
     error: message,

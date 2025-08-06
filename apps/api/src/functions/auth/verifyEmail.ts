@@ -24,12 +24,12 @@ const verifyEmailSchema = Joi.object({
 
 app.post('/auth/verify-email', validateBody(verifyEmailSchema), async (req, res, next) => {
   try {
-    const { email, confirmationCode } = req.body;
+    const { email } = req.body;
 
     // Note: AWS Cognito handles email verification automatically
     // This endpoint is for manual verification if needed
     // In a full Cognito setup, verification happens through Cognito's built-in flow
-    
+
     // For now, we'll update the user's email verification status in our database
     const result = await pool.query(
       'UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE email = $1 RETURNING id',

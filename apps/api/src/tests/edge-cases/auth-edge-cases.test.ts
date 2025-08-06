@@ -1,6 +1,7 @@
 import { CognitoService } from '../../services/cognitoService';
 import { AccountLockout } from '../../middleware/rateLimiting';
 import { loginSchema, registerSchema } from '../../schemas/authSchemas';
+import * as redis from 'redis';
 
 describe('Authentication Edge Cases', () => {
   describe('CognitoService Edge Cases', () => {
@@ -22,13 +23,15 @@ describe('Authentication Edge Cases', () => {
         // Mock the client
         jest.spyOn(cognitoService as any, 'cognitoClient', 'get').mockReturnValue(mockClient);
 
-        await expect(cognitoService.registerUser({
-          email: 'test@example.com',
-          password: 'Test123!',
-          firstName: 'John',
-          lastName: 'Doe',
-          role: 'consumer',
-        })).rejects.toThrow('Failed to register user');
+        await expect(
+          cognitoService.registerUser({
+            email: 'test@example.com',
+            password: 'Test123!',
+            firstName: 'John',
+            lastName: 'Doe',
+            role: 'consumer',
+          })
+        ).rejects.toThrow('Failed to register user');
       });
 
       it('should handle timeout errors', async () => {
@@ -41,8 +44,9 @@ describe('Authentication Edge Cases', () => {
 
         jest.spyOn(cognitoService as any, 'cognitoClient', 'get').mockReturnValue(mockClient);
 
-        await expect(cognitoService.loginUser('test@example.com', 'password'))
-          .rejects.toThrow('Invalid credentials');
+        await expect(cognitoService.loginUser('test@example.com', 'password')).rejects.toThrow(
+          'Invalid credentials'
+        );
       });
 
       it('should handle malformed responses', async () => {
@@ -52,15 +56,16 @@ describe('Authentication Edge Cases', () => {
 
         jest.spyOn(cognitoService as any, 'cognitoClient', 'get').mockReturnValue(mockClient);
 
-        await expect(cognitoService.loginUser('test@example.com', 'password'))
-          .rejects.toThrow('Authentication failed');
+        await expect(cognitoService.loginUser('test@example.com', 'password')).rejects.toThrow(
+          'Authentication failed'
+        );
       });
     });
 
     describe('Edge Case Inputs', () => {
       it('should handle extremely long email addresses', async () => {
-        const longEmail = `${'a'.repeat(240)  }@example.com`; // 251 chars total
-        
+        const longEmail = `${'a'.repeat(240)}@example.com`; // 251 chars total
+
         const validation = registerSchema.validate({
           email: longEmail,
           password: 'Test123!',
@@ -163,7 +168,7 @@ describe('Authentication Edge Cases', () => {
 
       it('should handle extremely long passwords', async () => {
         const longPassword = 'A'.repeat(100) + 'a'.repeat(100) + '1'.repeat(28); // 228 chars
-        
+
         const validation = registerSchema.validate({
           email: 'test@example.com',
           password: longPassword,
@@ -190,15 +195,15 @@ describe('Authentication Edge Cases', () => {
           del: jest.fn(),
         };
 
-        require('redis').createClient.mockReturnValue(mockRedisClient);
+        (redis as any).createClient.mockReturnValue(mockRedisClient);
 
         // Simulate concurrent requests
-        const promises = Array(3).fill(null).map(() => 
-          AccountLockout.recordFailedAttempt('test@example.com')
-        );
+        const promises = Array(3)
+          .fill(null)
+          .map(() => AccountLockout.recordFailedAttempt('test@example.com'));
 
         const results = await Promise.all(promises);
-        
+
         // All should return same attempt count (race condition handling)
         results.forEach(result => {
           expect(result.attempts).toBe(4);
@@ -212,10 +217,10 @@ describe('Authentication Edge Cases', () => {
           connect: jest.fn().mockRejectedValue(new Error('Connection failed')),
         };
 
-        require('redis').createClient.mockReturnValue(mockRedisClient);
+        (redis as any).createClient.mockReturnValue(mockRedisClient);
 
         const result = await AccountLockout.isAccountLocked('test@example.com');
-        
+
         // Should fail open for security
         expect(result.isLocked).toBe(false);
       });
@@ -230,10 +235,10 @@ describe('Authentication Edge Cases', () => {
           ttl: jest.fn().mockResolvedValue(-1), // Key exists but no TTL (shouldn't happen)
         };
 
-        require('redis').createClient.mockReturnValue(mockRedisClient);
+        (redis as any).createClient.mockReturnValue(mockRedisClient);
 
         const result = await AccountLockout.isAccountLocked('test@example.com');
-        
+
         // Should still return locked status even with corrupted TTL
         expect(result.isLocked).toBe(true);
       });
@@ -246,13 +251,13 @@ describe('Authentication Edge Cases', () => {
           ttl: jest.fn().mockResolvedValue(1), // 1 second remaining
         };
 
-        require('redis').createClient.mockReturnValue(mockRedisClient);
+        (redis as any).createClient.mockReturnValue(mockRedisClient);
 
         const result = await AccountLockout.isAccountLocked('test@example.com');
-        
+
         expect(result.isLocked).toBe(true);
         expect(result.lockoutExpires).toBeInstanceOf(Date);
-        
+
         // Should expire in approximately 1 second
         const timeUntilExpiry = result.lockoutExpires!.getTime() - Date.now();
         expect(timeUntilExpiry).toBeGreaterThan(500);
@@ -278,7 +283,7 @@ describe('Authentication Edge Cases', () => {
       testCases.forEach(({ email, valid }) => {
         it(`should ${valid ? 'accept' : 'reject'} email: ${email}`, () => {
           const validation = loginSchema.validate({ email, password: 'Test123!' });
-          
+
           if (valid) {
             expect(validation.error).toBeUndefined();
           } else {
@@ -320,7 +325,7 @@ describe('Authentication Edge Cases', () => {
   describe('Memory and Performance Edge Cases', () => {
     it('should handle large request payloads gracefully', async () => {
       const largeString = 'a'.repeat(10000);
-      
+
       const validation = registerSchema.validate({
         email: 'test@example.com',
         password: 'Test123!',
@@ -334,18 +339,20 @@ describe('Authentication Edge Cases', () => {
     });
 
     it('should handle concurrent validation requests', async () => {
-      const requests = Array(100).fill(null).map((_, i) => 
-        registerSchema.validate({
-          email: `test${i}@example.com`,
-          password: 'Test123!',
-          firstName: 'John',
-          lastName: 'Doe',
-          role: 'consumer',
-        })
-      );
+      const requests = Array(100)
+        .fill(null)
+        .map((_, i) =>
+          registerSchema.validate({
+            email: `test${i}@example.com`,
+            password: 'Test123!',
+            firstName: 'John',
+            lastName: 'Doe',
+            role: 'consumer',
+          })
+        );
 
       const results = await Promise.all(requests);
-      
+
       results.forEach(result => {
         expect(result.error).toBeUndefined();
       });

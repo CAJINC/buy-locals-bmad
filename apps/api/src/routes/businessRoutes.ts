@@ -7,12 +7,15 @@ import { locationSecurityMiddleware } from '../middleware/locationSecurity.js';
 import {
   businessMediaUploadSchema,
   businessSearchSchema,
-  categoryQuerySchema,
   createBusinessSchema,
-  updateBusinessSchema
+  updateBusinessSchema,
 } from '../schemas/businessSchemas.js';
 import { errorResponse, paginatedResponse, successResponse } from '../utils/responseUtils.js';
-import { getCategoriesInLocation, getPopularAreas, handler as locationSearchHandler } from '../functions/business/locationSearch.js';
+import {
+  getCategoriesInLocation,
+  getPopularAreas,
+  handler as locationSearchHandler,
+} from '../functions/business/locationSearch.js';
 import { NextFunction, Request, Response } from 'express';
 
 const router = Router();
@@ -25,7 +28,8 @@ router.use(performanceMonitoring);
  * POST /api/businesses
  * Create a new business (business owners and admins only)
  */
-router.post('/',
+router.post(
+  '/',
   authMiddleware,
   requireRole(['business_owner', 'admin']),
   validateBody(createBusinessSchema),
@@ -48,7 +52,8 @@ router.post('/',
  * GET /api/businesses/search/location
  * Location-based business search with sub-1-second performance
  */
-router.get('/search/location',
+router.get(
+  '/search/location',
   locationSecurityMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -56,11 +61,11 @@ router.get('/search/location',
       const event = {
         queryStringParameters: req.query as { [key: string]: string },
         headers: req.headers,
-        requestContext: { requestId: `express-${  Date.now()}` },
+        requestContext: { requestId: `express-${Date.now()}` },
       } as any;
 
       const result = await locationSearchHandler(event, {} as any, {} as any);
-      
+
       if (result.statusCode === 200) {
         const body = JSON.parse(result.body);
         res.set(result.headers || {});
@@ -79,18 +84,19 @@ router.get('/search/location',
  * GET /api/businesses/search/location/categories
  * Get categories available in a specific location
  */
-router.get('/search/location/categories',
+router.get(
+  '/search/location/categories',
   locationSecurityMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const event = {
         queryStringParameters: req.query as { [key: string]: string },
         headers: req.headers,
-        requestContext: { requestId: `express-${  Date.now()}` },
+        requestContext: { requestId: `express-${Date.now()}` },
       } as any;
 
       const result = await getCategoriesInLocation(event, {} as any, {} as any);
-      
+
       if (result.statusCode === 200) {
         const body = JSON.parse(result.body);
         res.set(result.headers || {});
@@ -109,18 +115,19 @@ router.get('/search/location/categories',
  * GET /api/businesses/search/location/popular-areas
  * Get popular business areas near a location
  */
-router.get('/search/location/popular-areas',
+router.get(
+  '/search/location/popular-areas',
   locationSecurityMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const event = {
         queryStringParameters: req.query as { [key: string]: string },
         headers: req.headers,
-        requestContext: { requestId: `express-${  Date.now()}` },
+        requestContext: { requestId: `express-${Date.now()}` },
       } as any;
 
       const result = await getPopularAreas(event, {} as any, {} as any);
-      
+
       if (result.statusCode === 200) {
         const body = JSON.parse(result.body);
         res.set(result.headers || {});
@@ -139,13 +146,14 @@ router.get('/search/location/popular-areas',
  * GET /api/businesses
  * Search businesses with traditional filtering and pagination (fallback)
  */
-router.get('/',
+router.get(
+  '/',
   validateQuery(businessSearchSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const searchQuery = req.query as any;
       const { businesses, totalCount } = await businessService.searchBusinesses(searchQuery);
-      
+
       return paginatedResponse(
         res,
         businesses,
@@ -163,7 +171,8 @@ router.get('/',
  * GET /api/businesses/my
  * Get all businesses owned by the authenticated user
  */
-router.get('/my',
+router.get(
+  '/my',
   authMiddleware,
   requireBusinessOwner,
   async (req: Request, res: Response, next: NextFunction) => {
@@ -185,38 +194,35 @@ router.get('/my',
  * GET /api/businesses/categories
  * Get all available business categories
  */
-router.get('/categories',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const categories = await businessService.getCategories();
-      return successResponse(res, 200, categories, 'Categories retrieved successfully');
-    } catch (error) {
-      next(error);
-    }
+router.get('/categories', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const categories = await businessService.getCategories();
+    return successResponse(res, 200, categories, 'Categories retrieved successfully');
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * GET /api/businesses/:businessId
  * Get business by ID
  */
-router.get('/:businessId',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { businessId } = req.params;
-      const business = await businessService.getBusinessById(businessId);
-      return successResponse(res, 200, business, 'Business retrieved successfully');
-    } catch (error) {
-      next(error);
-    }
+router.get('/:businessId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { businessId } = req.params;
+    const business = await businessService.getBusinessById(businessId);
+    return successResponse(res, 200, business, 'Business retrieved successfully');
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * PUT /api/businesses/:businessId
  * Update business (owner or admin only)
  */
-router.put('/:businessId',
+router.put(
+  '/:businessId',
   authMiddleware,
   validateBody(updateBusinessSchema),
   async (req: Request, res: Response, next: NextFunction) => {
@@ -252,7 +258,8 @@ router.put('/:businessId',
  * DELETE /api/businesses/:businessId
  * Delete business (deactivate - owner or admin only)
  */
-router.delete('/:businessId',
+router.delete(
+  '/:businessId',
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -284,7 +291,8 @@ router.delete('/:businessId',
  * GET /api/businesses/:businessId/stats
  * Get business statistics (owner or admin only)
  */
-router.get('/:businessId/stats',
+router.get(
+  '/:businessId/stats',
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -315,7 +323,8 @@ router.get('/:businessId/stats',
  * PUT /api/businesses/:businessId/media
  * Update business media (owner or admin only)
  */
-router.put('/:businessId/media',
+router.put(
+  '/:businessId/media',
   authMiddleware,
   validateBody(businessMediaUploadSchema),
   async (req: Request, res: Response, next: NextFunction) => {

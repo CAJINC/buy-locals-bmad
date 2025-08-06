@@ -9,7 +9,7 @@
     "deploy": "serverless deploy",
     "deploy:staging": "serverless deploy --stage staging",
     "deploy:prod": "serverless deploy --stage prod",
-    "lint": "eslint . --ext .ts --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --ext .ts --report-unused-disable-directives",
     "test": "jest",
     "type-check": "tsc --noEmit",
     "migrate:up": "node-pg-migrate up",

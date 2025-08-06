@@ -1,14 +1,14 @@
-import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { 
-  HomeIcon, 
-  BuildingStorefrontIcon, 
-  CalendarDaysIcon, 
-  ChartBarIcon 
-} from '@heroicons/react/24/outline'
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  BuildingStorefrontIcon,
+  CalendarDaysIcon,
+  ChartBarIcon,
+  HomeIcon,
+} from '@heroicons/react/24/outline';
 
 interface LayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 const navigation = [
@@ -16,10 +16,10 @@ const navigation = [
   { name: 'Business Listings', href: '/businesses', icon: BuildingStorefrontIcon },
   { name: 'Reservations', href: '/reservations', icon: CalendarDaysIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-]
+];
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const location = useLocation()
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,9 +32,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <h1 className="text-xl font-bold text-gray-900">BuyLocals Dashboard</h1>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                {navigation.map((item) => {
-                  const Icon = item.icon
-                  const isActive = location.pathname === item.href
+                {navigation.map(item => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
                   return (
                     <Link
                       key={item.name}
@@ -48,7 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Icon className="h-4 w-4 mr-2" />
                       {item.name}
                     </Link>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -57,9 +57,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
-  )
-}
+  );
+};

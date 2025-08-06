@@ -1,5 +1,12 @@
-import { NextFunction, Request, Response } from 'express';
-import { CognitoAuthenticatedRequest, authenticateCognito, requireRole } from '../../middleware/cognitoAuth';
+import { NextFunction, Response } from 'express';
+import {
+  CognitoAuthenticatedRequest,
+  authenticateCognito,
+  requireAdmin,
+  requireBusinessOwner,
+  requireConsumer,
+  requireRole,
+} from '../../middleware/cognitoAuth';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 
 // Mock aws-jwt-verify
@@ -156,11 +163,7 @@ describe('CognitoAuth Middleware', () => {
     it('should allow access with correct role', () => {
       const middleware = requireRole(['consumer', 'business_owner']);
 
-      middleware(
-        mockReq as CognitoAuthenticatedRequest,
-        mockRes as Response,
-        mockNext
-      );
+      middleware(mockReq as CognitoAuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
       expect(mockRes.status).not.toHaveBeenCalled();
@@ -169,11 +172,7 @@ describe('CognitoAuth Middleware', () => {
     it('should deny access with incorrect role', () => {
       const middleware = requireRole(['admin']);
 
-      middleware(
-        mockReq as CognitoAuthenticatedRequest,
-        mockRes as Response,
-        mockNext
-      );
+      middleware(mockReq as CognitoAuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
@@ -184,11 +183,7 @@ describe('CognitoAuth Middleware', () => {
       mockReq.user = undefined;
       const middleware = requireRole(['consumer']);
 
-      middleware(
-        mockReq as CognitoAuthenticatedRequest,
-        mockRes as Response,
-        mockNext
-      );
+      middleware(mockReq as CognitoAuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Authentication required' });
@@ -208,37 +203,20 @@ describe('CognitoAuth Middleware', () => {
 
     it('requireConsumer should work for consumer role', () => {
       mockReq.user!.role = 'consumer';
-      const { requireConsumer } = require('../../middleware/cognitoAuth');
 
-      requireConsumer(
-        mockReq as CognitoAuthenticatedRequest,
-        mockRes as Response,
-        mockNext
-      );
+      requireConsumer(mockReq as CognitoAuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
     });
 
     it('requireBusinessOwner should work for business_owner role', () => {
-      const { requireBusinessOwner } = require('../../middleware/cognitoAuth');
-
-      requireBusinessOwner(
-        mockReq as CognitoAuthenticatedRequest,
-        mockRes as Response,
-        mockNext
-      );
+      requireBusinessOwner(mockReq as CognitoAuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
     });
 
     it('requireAdmin should deny non-admin access', () => {
-      const { requireAdmin } = require('../../middleware/cognitoAuth');
-
-      requireAdmin(
-        mockReq as CognitoAuthenticatedRequest,
-        mockRes as Response,
-        mockNext
-      );
+      requireAdmin(mockReq as CognitoAuthenticatedRequest, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
       expect(mockNext).not.toHaveBeenCalled();

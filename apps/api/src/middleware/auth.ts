@@ -4,16 +4,14 @@ import { config } from '../config/environment.js';
 import { errorResponse } from '../utils/responseUtils.js';
 import { UserService } from '../services/userService.js';
 
-// Extend Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        role: string;
-      };
-    }
+// Extend Express Request interface to include user
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: {
+      id: string;
+      email: string;
+      role: string;
+    };
   }
 }
 
@@ -41,7 +39,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     // Verify JWT token
     const decoded = jwt.verify(token, config.jwtSecret) as any;
-    
+
     // Validate that user still exists and is active
     const user = await userService.getUserProfile(decoded.id);
     if (!user) {
@@ -117,14 +115,10 @@ export const generateToken = (user: { id: string; email: string; role: string })
  * Generate refresh token
  */
 export const generateRefreshToken = (userId: string): string => {
-  return jwt.sign(
-    { userId },
-    `${config.jwtSecret  }_refresh`,
-    {
-      expiresIn: '7d',
-      issuer: 'buy-locals-api',
-    }
-  );
+  return jwt.sign({ userId }, `${config.jwtSecret}_refresh`, {
+    expiresIn: '7d',
+    issuer: 'buy-locals-api',
+  });
 };
 
 // Legacy export for backward compatibility

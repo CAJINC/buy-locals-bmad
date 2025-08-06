@@ -31,7 +31,7 @@ const getDatabaseConfig = () => {
 const pool = new Pool(getDatabaseConfig());
 
 // Connection health checking and retry logic
-pool.on('connect', (client: PoolClient) => {
+pool.on('connect', (_client: PoolClient) => {
   console.log('New database connection established');
 });
 
@@ -77,13 +77,13 @@ export const executeTransaction = async (
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     const results = [];
     for (const query of queries) {
       const result = await client.query(query.text, query.params);
       results.push(result);
     }
-    
+
     await client.query('COMMIT');
     return results;
   } catch (error) {

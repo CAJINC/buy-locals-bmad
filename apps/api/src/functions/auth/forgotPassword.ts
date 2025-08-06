@@ -19,7 +19,7 @@ app.use(helmet());
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
 
-app.post('/auth/forgot-password', validateBody(forgotPasswordSchema), async (req, res, next) => {
+app.post('/auth/forgot-password', validateBody(forgotPasswordSchema), async (req, res, _next) => {
   try {
     const { email }: ForgotPasswordRequest = req.body;
 
@@ -32,7 +32,7 @@ app.post('/auth/forgot-password', validateBody(forgotPasswordSchema), async (req
     });
   } catch (error) {
     console.error('Forgot password error:', error);
-    
+
     // Handle specific Cognito errors but don't expose them to prevent enumeration
     if (error instanceof Error) {
       if (error.message.includes('UserNotFoundException')) {
@@ -42,17 +42,17 @@ app.post('/auth/forgot-password', validateBody(forgotPasswordSchema), async (req
         });
       }
       if (error.message.includes('TooManyRequestsException')) {
-        return res.status(429).json({ 
-          error: 'Too many password reset requests. Please try again later.' 
+        return res.status(429).json({
+          error: 'Too many password reset requests. Please try again later.',
         });
       }
       if (error.message.includes('LimitExceededException')) {
-        return res.status(429).json({ 
-          error: 'Password reset limit exceeded. Please try again later.' 
+        return res.status(429).json({
+          error: 'Password reset limit exceeded. Please try again later.',
         });
       }
     }
-    
+
     // For any other error, return generic success message
     res.json({
       message: 'If an account with that email exists, a password reset link has been sent.',

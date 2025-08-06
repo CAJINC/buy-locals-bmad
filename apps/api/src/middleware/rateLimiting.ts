@@ -1,13 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { createClient } from 'redis';
-import { config } from '../config/environment.js';
+import { config } from '../config/environment';
 
 // Redis client for rate limiting
 const redisClient = createClient({
   url: config.redisUrl,
 });
 
-redisClient.on('error', (err) => {
+redisClient.on('error', err => {
   console.error('Redis Rate Limiting Error:', err);
 });
 
@@ -44,7 +44,7 @@ export const createRateLimit = (options: RateLimitOptions) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       await initializeRedis();
-      
+
       const key = `rate_limit:${keyGenerator(req)}`;
       const now = Date.now();
       const windowStart = now - windowMs;
@@ -77,21 +77,21 @@ export const createRateLimit = (options: RateLimitOptions) => {
       const originalJson = res.json;
       let responseStatus = 200;
 
-      res.status = function(code: number) {
+      res.status = function (code: number) {
         responseStatus = code;
         return originalStatus.call(this, code);
       };
 
-      res.json = function(body: any) {
+      res.json = function (body: any) {
         // Remove request from count if we should skip based on response
         if (
           (skipSuccessfulRequests && responseStatus >= 200 && responseStatus < 400) ||
           (skipFailedRequests && responseStatus >= 400)
         ) {
           // Remove the last added request
-          redisClient.zRemRangeByRank(key, -1, -1).catch(err => 
-            console.error('Error removing request from rate limit:', err)
-          );
+          redisClient
+            .zRemRangeByRank(key, -1, -1)
+            .catch(err => console.error('Error removing request from rate limit:', err));
         }
         return originalJson.call(this, body);
       };
@@ -150,7 +150,7 @@ export class AccountLockout {
   }> {
     try {
       await initializeRedis();
-      
+
       const attemptKey = `${this.ATTEMPT_PREFIX}${identifier}`;
       const lockoutKey = `${this.LOCKOUT_PREFIX}${identifier}`;
 
@@ -173,7 +173,7 @@ export class AccountLockout {
       if (attempts >= this.MAX_ATTEMPTS) {
         await redisClient.setEx(lockoutKey, this.LOCKOUT_DURATION, 'locked');
         await redisClient.del(attemptKey);
-        
+
         return {
           attempts,
           isLocked: true,
@@ -200,10 +200,10 @@ export class AccountLockout {
   }> {
     try {
       await initializeRedis();
-      
+
       const lockoutKey = `${this.LOCKOUT_PREFIX}${identifier}`;
       const isLocked = await redisClient.exists(lockoutKey);
-      
+
       if (isLocked) {
         const ttl = await redisClient.ttl(lockoutKey);
         return {
@@ -225,10 +225,10 @@ export class AccountLockout {
   static async clearFailedAttempts(identifier: string): Promise<void> {
     try {
       await initializeRedis();
-      
+
       const attemptKey = `${this.ATTEMPT_PREFIX}${identifier}`;
       const lockoutKey = `${this.LOCKOUT_PREFIX}${identifier}`;
-      
+
       await redisClient.del(attemptKey);
       await redisClient.del(lockoutKey);
     } catch (error) {
@@ -242,10 +242,10 @@ export class AccountLockout {
   static async unlockAccount(identifier: string): Promise<void> {
     try {
       await initializeRedis();
-      
+
       const attemptKey = `${this.ATTEMPT_PREFIX}${identifier}`;
       const lockoutKey = `${this.LOCKOUT_PREFIX}${identifier}`;
-      
+
       await redisClient.del(attemptKey);
       await redisClient.del(lockoutKey);
     } catch (error) {

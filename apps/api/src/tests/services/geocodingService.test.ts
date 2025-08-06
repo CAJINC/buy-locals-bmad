@@ -1,11 +1,10 @@
 import { GeocodingService } from '../../services/geocodingService.js';
-import { config } from '../../config/environment.js';
 
 // Mock config
-jest.mock('../../config/environment.js', () => ({
+jest.mock('../../config/environment', () => ({
   config: {
-    googleMapsApiKey: 'test-api-key'
-  }
+    googleMapsApiKey: 'test-api-key',
+  },
 }));
 
 // Mock fetch
@@ -25,28 +24,35 @@ describe('GeocodingService', () => {
     it('should successfully geocode an address', async () => {
       const mockResponse = {
         status: 'OK',
-        results: [{
-          formatted_address: '123 Main St, New York, NY 10001, USA',
-          geometry: {
-            location: { lat: 40.7128, lng: -74.0060 }
+        results: [
+          {
+            formatted_address: '123 Main St, New York, NY 10001, USA',
+            geometry: {
+              location: { lat: 40.7128, lng: -74.006 },
+            },
+            address_components: [
+              { types: ['street_number'], long_name: '123' },
+              { types: ['route'], long_name: 'Main St' },
+              { types: ['locality'], long_name: 'New York' },
+              { types: ['administrative_area_level_1'], short_name: 'NY' },
+              { types: ['postal_code'], long_name: '10001' },
+              { types: ['country'], short_name: 'US' },
+            ],
           },
-          address_components: [
-            { types: ['street_number'], long_name: '123' },
-            { types: ['route'], long_name: 'Main St' },
-            { types: ['locality'], long_name: 'New York' },
-            { types: ['administrative_area_level_1'], short_name: 'NY' },
-            { types: ['postal_code'], long_name: '10001' },
-            { types: ['country'], short_name: 'US' }
-          ]
-        }]
+        ],
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse)
+        json: () => Promise.resolve(mockResponse),
       } as Response);
 
-      const result = await geocodingService.geocodeAddress('123 Main St', 'New York', 'NY', '10001');
+      const result = await geocodingService.geocodeAddress(
+        '123 Main St',
+        'New York',
+        'NY',
+        '10001'
+      );
 
       expect(result).toEqual({
         address: '123 Main St',
@@ -54,29 +60,31 @@ describe('GeocodingService', () => {
         state: 'NY',
         zipCode: '10001',
         country: 'US',
-        coordinates: { lat: 40.7128, lng: -74.0060 },
-        formattedAddress: '123 Main St, New York, NY 10001, USA'
+        coordinates: { lat: 40.7128, lng: -74.006 },
+        formattedAddress: '123 Main St, New York, NY 10001, USA',
       });
     });
 
     it('should use cache for repeated requests', async () => {
       const mockResponse = {
         status: 'OK',
-        results: [{
-          formatted_address: '123 Main St, New York, NY 10001, USA',
-          geometry: { location: { lat: 40.7128, lng: -74.0060 } },
-          address_components: []
-        }]
+        results: [
+          {
+            formatted_address: '123 Main St, New York, NY 10001, USA',
+            geometry: { location: { lat: 40.7128, lng: -74.006 } },
+            address_components: [],
+          },
+        ],
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse)
+        json: () => Promise.resolve(mockResponse),
       } as Response);
 
       // First call
       await geocodingService.geocodeAddress('123 Main St', 'New York', 'NY', '10001');
-      
+
       // Second call - should use cache
       await geocodingService.geocodeAddress('123 Main St', 'New York', 'NY', '10001');
 
@@ -86,7 +94,7 @@ describe('GeocodingService', () => {
     it('should handle geocoding API errors', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
-        status: 403
+        status: 403,
       } as Response);
 
       await expect(
@@ -97,12 +105,12 @@ describe('GeocodingService', () => {
     it('should handle no results response', async () => {
       const mockResponse = {
         status: 'ZERO_RESULTS',
-        results: []
+        results: [],
       };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResponse)
+        json: () => Promise.resolve(mockResponse),
       } as Response);
 
       await expect(
@@ -113,7 +121,7 @@ describe('GeocodingService', () => {
 
   describe('validateCoordinates', () => {
     it('should validate correct coordinates', () => {
-      expect(geocodingService.validateCoordinates(40.7128, -74.0060)).toBe(true);
+      expect(geocodingService.validateCoordinates(40.7128, -74.006)).toBe(true);
       expect(geocodingService.validateCoordinates(0, 0)).toBe(true);
       expect(geocodingService.validateCoordinates(90, 180)).toBe(true);
       expect(geocodingService.validateCoordinates(-90, -180)).toBe(true);
@@ -130,7 +138,7 @@ describe('GeocodingService', () => {
   describe('constructor', () => {
     it('should throw error if API key is missing', () => {
       jest.doMock('../../config/environment.js', () => ({
-        config: { googleMapsApiKey: '' }
+        config: { googleMapsApiKey: '' },
       }));
 
       expect(() => {

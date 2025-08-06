@@ -1,9 +1,7 @@
 import {
   AdminCreateUserCommand,
-  AdminDeleteUserCommand,
   AdminGetUserCommand,
   AdminInitiateAuthCommand,
-  AdminRespondToAuthChallengeCommand,
   AdminSetUserPasswordCommand,
   AdminUpdateUserAttributesCommand,
   AttributeType,
@@ -11,7 +9,8 @@ import {
   ConfirmForgotPasswordCommand,
   ForgotPasswordCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { config } from '../config/environment.js';
+import crypto from 'crypto';
+import { config } from '../config/environment';
 import { CreateUserRequest, User } from '@buy-locals/shared';
 
 const cognitoClient = new CognitoIdentityProviderClient({
@@ -19,13 +18,14 @@ const cognitoClient = new CognitoIdentityProviderClient({
 });
 
 export class CognitoService {
-  
   /**
    * Register a new user in Cognito
    */
-  async registerUser(userData: CreateUserRequest): Promise<{ userId: string; tempPassword: string }> {
+  async registerUser(
+    userData: CreateUserRequest
+  ): Promise<{ userId: string; tempPassword: string }> {
     const tempPassword = this.generateTempPassword();
-    
+
     const userAttributes: AttributeType[] = [
       { Name: 'email', Value: userData.email },
       { Name: 'email_verified', Value: 'false' },
@@ -49,7 +49,7 @@ export class CognitoService {
       });
 
       const createResult = await cognitoClient.send(createUserCommand);
-      
+
       // Set permanent password
       const setPasswordCommand = new AdminSetUserPasswordCommand({
         UserPoolId: config.cognitoUserPoolId,
@@ -73,7 +73,10 @@ export class CognitoService {
   /**
    * Authenticate user and get tokens
    */
-  async loginUser(email: string, password: string): Promise<{
+  async loginUser(
+    email: string,
+    password: string
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
     idToken: string;
@@ -151,7 +154,7 @@ export class CognitoService {
       });
 
       const result = await cognitoClient.send(getUserCommand);
-      
+
       const attributes = result.UserAttributes || [];
       const getAttr = (name: string) => attributes.find(attr => attr.Name === name)?.Value || '';
 
@@ -177,14 +180,17 @@ export class CognitoService {
   /**
    * Update user profile attributes
    */
-  async updateUserProfile(username: string, updates: {
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-  }): Promise<void> {
+  async updateUserProfile(
+    username: string,
+    updates: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+    }
+  ): Promise<void> {
     try {
       const attributes: AttributeType[] = [];
-      
+
       if (updates.firstName) {
         attributes.push({ Name: 'given_name', Value: updates.firstName });
       }
@@ -231,7 +237,11 @@ export class CognitoService {
   /**
    * Confirm password reset with code
    */
-  async confirmForgotPassword(email: string, confirmationCode: string, newPassword: string): Promise<void> {
+  async confirmForgotPassword(
+    email: string,
+    confirmationCode: string,
+    newPassword: string
+  ): Promise<void> {
     try {
       const confirmCommand = new ConfirmForgotPasswordCommand({
         ClientId: config.cognitoClientId,
@@ -255,8 +265,7 @@ export class CognitoService {
     if (!config.cognitoClientSecret) {
       return '';
     }
-    
-    const crypto = require('crypto');
+
     return crypto
       .createHmac('sha256', config.cognitoClientSecret)
       .update(username + config.cognitoClientId)

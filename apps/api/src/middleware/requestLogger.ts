@@ -1,19 +1,17 @@
 import { NextFunction, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-// Extend Request interface to include correlationId
-declare global {
-  namespace Express {
-    interface Request {
-      correlationId: string;
-      startTime: number;
-    }
+// Extend Express Request interface to include correlationId
+declare module 'express-serve-static-core' {
+  interface Request {
+    correlationId: string;
+    startTime: number;
   }
 }
 
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   // Generate correlation ID for request tracking
-  req.correlationId = req.headers['x-correlation-id'] as string || uuidv4();
+  req.correlationId = (req.headers['x-correlation-id'] as string) || uuidv4();
   req.startTime = Date.now();
 
   // Add correlation ID to response headers
@@ -34,7 +32,9 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   if (process.env.NODE_ENV === 'production') {
     console.log(JSON.stringify(requestLog));
   } else {
-    console.log(`[${requestLog.timestamp}] ${requestLog.method} ${requestLog.url} - ${requestLog.correlationId}`);
+    console.log(
+      `[${requestLog.timestamp}] ${requestLog.method} ${requestLog.url} - ${requestLog.correlationId}`
+    );
   }
 
   // Log response when request finishes
@@ -54,7 +54,9 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
     if (process.env.NODE_ENV === 'production') {
       console.log(JSON.stringify(responseLog));
     } else {
-      console.log(`[${responseLog.timestamp}] ${responseLog.method} ${responseLog.url} - ${responseLog.statusCode} (${responseLog.duration})`);
+      console.log(
+        `[${responseLog.timestamp}] ${responseLog.method} ${responseLog.url} - ${responseLog.statusCode} (${responseLog.duration})`
+      );
     }
   });
 

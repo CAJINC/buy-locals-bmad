@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
-import { config } from '../config/environment.js';
+import { config } from '../config/environment';
 
 export interface CognitoAuthenticatedRequest extends Request {
   user?: {
@@ -14,7 +14,7 @@ export interface CognitoAuthenticatedRequest extends Request {
 // Create JWT verifier for Cognito tokens
 const verifier = CognitoJwtVerifier.create({
   userPoolId: config.cognitoUserPoolId,
-  tokenUse: "access",
+  tokenUse: 'access',
   clientId: config.cognitoClientId,
 });
 
@@ -33,13 +33,13 @@ export const authenticateCognito = async (
 
     // Verify the JWT token with Cognito
     const payload = await verifier.verify(token);
-    
+
     // Extract user information from token payload
     req.user = {
       id: payload.sub,
-      email: payload.email || '',
-      role: payload['custom:role'] || 'consumer',
-      emailVerified: payload.email_verified || false,
+      email: String(payload.email || ''),
+      role: String(payload['custom:role'] || 'consumer'),
+      emailVerified: Boolean(payload.email_verified || false),
     };
 
     next();

@@ -1,7 +1,6 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { locationSearchService } from '../../services/locationSearchService.js';
 import { locationMonitoringService } from '../../services/locationMonitoringService.js';
-import { validateRequest } from '../../middleware/validation.js';
 import { LocationSearchQuery } from '../../services/locationSearchService.js';
 import { z } from 'zod';
 
@@ -24,11 +23,11 @@ const locationSearchSchema = z.object({
  * Location-based business search with sub-1-second performance
  * GET /api/v1/businesses/search/location
  */
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async event => {
   try {
     // Parse and validate query parameters
     const queryParams = event.queryStringParameters || {};
-    
+
     // Convert query string parameters to proper types
     const searchQuery: Partial<LocationSearchQuery> = {
       lat: queryParams.lat ? parseFloat(queryParams.lat) : undefined,
@@ -38,10 +37,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       search: queryParams.search || undefined,
       page: queryParams.page ? parseInt(queryParams.page, 10) : undefined,
       limit: queryParams.limit ? parseInt(queryParams.limit, 10) : undefined,
-      sortBy: queryParams.sortBy as 'distance' | 'rating' | 'newest' || undefined,
-      priceRange: queryParams.priceRange 
-        ? JSON.parse(queryParams.priceRange) 
-        : undefined,
+      sortBy: (queryParams.sortBy as 'distance' | 'rating' | 'newest') || undefined,
+      priceRange: queryParams.priceRange ? JSON.parse(queryParams.priceRange) : undefined,
       amenities: queryParams.amenities ? queryParams.amenities.split(',') : undefined,
       isOpen: queryParams.isOpen ? queryParams.isOpen === 'true' : undefined,
     };
@@ -62,7 +59,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         lng: validatedQuery.lng,
         radius: validatedQuery.radius,
         category: validatedQuery.category,
-        search: validatedQuery.search
+        search: validatedQuery.search,
       }
     );
 
@@ -92,7 +89,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             limit: validatedQuery.limit,
             totalCount: result.totalCount,
             totalPages: Math.ceil(result.totalCount / validatedQuery.limit),
-            hasNext: (validatedQuery.page * validatedQuery.limit) < result.totalCount,
+            hasNext: validatedQuery.page * validatedQuery.limit < result.totalCount,
             hasPrevious: validatedQuery.page > 1,
           },
           searchMetadata: {
@@ -113,7 +110,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       const queryParams = event.queryStringParameters || {};
       const lat = queryParams.lat ? parseFloat(queryParams.lat) : 0;
       const lng = queryParams.lng ? parseFloat(queryParams.lng) : 0;
-      
+
       await locationMonitoringService.recordSearchExecution(
         0, // no execution time on error
         false,
@@ -123,7 +120,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           lng,
           radius: queryParams.radius ? parseFloat(queryParams.radius) : 25,
           category: queryParams.category ? queryParams.category.split(',') : undefined,
-          search: queryParams.search
+          search: queryParams.search,
         }
       );
     }
@@ -158,10 +155,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
  * Get business categories available in a location
  * GET /api/v1/businesses/search/location/categories
  */
-export const getCategoriesInLocation: APIGatewayProxyHandler = async (event) => {
+export const getCategoriesInLocation: APIGatewayProxyHandler = async event => {
   try {
     const queryParams = event.queryStringParameters || {};
-    
+
     const lat = queryParams.lat ? parseFloat(queryParams.lat) : undefined;
     const lng = queryParams.lng ? parseFloat(queryParams.lng) : undefined;
     const radius = queryParams.radius ? parseFloat(queryParams.radius) : 25;
@@ -196,7 +193,7 @@ export const getCategoriesInLocation: APIGatewayProxyHandler = async (event) => 
     };
   } catch (error) {
     console.error('Categories in location error:', error);
-    
+
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -213,10 +210,10 @@ export const getCategoriesInLocation: APIGatewayProxyHandler = async (event) => 
  * Get popular search areas and business density
  * GET /api/v1/businesses/search/location/popular-areas
  */
-export const getPopularAreas: APIGatewayProxyHandler = async (event) => {
+export const getPopularAreas: APIGatewayProxyHandler = async event => {
   try {
     const queryParams = event.queryStringParameters || {};
-    
+
     const lat = queryParams.lat ? parseFloat(queryParams.lat) : undefined;
     const lng = queryParams.lng ? parseFloat(queryParams.lng) : undefined;
     const radius = queryParams.radius ? parseFloat(queryParams.radius) : 50;
@@ -251,7 +248,7 @@ export const getPopularAreas: APIGatewayProxyHandler = async (event) => {
     };
   } catch (error) {
     console.error('Popular areas error:', error);
-    
+
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },

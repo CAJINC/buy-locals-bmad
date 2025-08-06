@@ -5,6 +5,9 @@ import { handler as loginHandler } from '../../functions/auth/login';
 import { handler as refreshHandler } from '../../functions/auth/refresh';
 import { handler as logoutHandler } from '../../functions/auth/logout';
 import { CreateUserRequest, LoginRequest } from '@buy-locals/shared';
+import { CognitoService } from '../../services/cognitoService';
+import { pool } from '../../config/database';
+import { AccountLockout } from '../../middleware/rateLimiting';
 
 // Mock the serverless handler wrapper for testing
 const createTestApp = (handler: any) => {
@@ -26,13 +29,13 @@ const createTestApp = (handler: any) => {
     try {
       const result = await handler(event, {});
       res.status(result.statusCode);
-      
+
       if (result.headers) {
         Object.entries(result.headers).forEach(([key, value]) => {
           res.set(key, value as string);
         });
       }
-      
+
       res.send(result.body);
     } catch (error) {
       res.status(500).json({ error: 'Internal server error' });
@@ -51,31 +54,33 @@ describe('Authentication API Integration Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Mock CognitoService
     cognitoServiceMock = {
       registerUser: jest.fn(),
       loginUser: jest.fn(),
       refreshToken: jest.fn(),
     };
-    
-    require('../../services/cognitoService').CognitoService = jest.fn(() => cognitoServiceMock);
-    
+
+    (CognitoService as jest.MockedClass<typeof CognitoService>).mockImplementation(
+      () => cognitoServiceMock as any
+    );
+
     // Mock database pool
     const mockPool = {
       query: jest.fn(),
     };
-    require('../../config/database').pool = mockPool;
-    
+    (pool as any).query = mockPool.query;
+
     // Mock rate limiting to pass through
     const mockRateLimit = (req: any, res: any, next: any) => next();
-    require('../../middleware/rateLimiting').authRateLimit = mockRateLimit;
-    require('../../middleware/rateLimiting').registrationRateLimit = mockRateLimit;
-    require('../../middleware/rateLimiting').AccountLockout = {
-      isAccountLocked: jest.fn().mockResolvedValue({ isLocked: false }),
-      clearFailedAttempts: jest.fn(),
-      recordFailedAttempt: jest.fn().mockResolvedValue({ attempts: 1, isLocked: false }),
-    };
+    (authRateLimit as any) = mockRateLimit;
+    (registrationRateLimit as any) = mockRateLimit;
+    (AccountLockout as any).isAccountLocked = jest.fn().mockResolvedValue({ isLocked: false });
+    (AccountLockout as any).clearFailedAttempts = jest.fn();
+    (AccountLockout as any).recordFailedAttempt = jest
+      .fn()
+      .mockResolvedValue({ attempts: 1, isLocked: false });
   });
 
   describe('POST /auth/register', () => {
@@ -97,25 +102,25 @@ describe('Authentication API Integration Tests', () => {
         refreshToken: 'refresh-token',
       });
 
-      const mockPool = require('../../config/database').pool;
+      const mockPool = pool as any;
       mockPool.query
         .mockResolvedValueOnce({ rows: [] }) // User doesn't exist
-        .mockResolvedValueOnce({ // Insert user
-          rows: [{
-            id: 'user-123',
-            email: 'test@example.com',
-            role: 'consumer',
-            profile: { firstName: 'John', lastName: 'Doe' },
-            is_email_verified: false,
-            created_at: new Date(),
-            updated_at: new Date(),
-          }]
+        .mockResolvedValueOnce({
+          // Insert user
+          rows: [
+            {
+              id: 'user-123',
+              email: 'test@example.com',
+              role: 'consumer',
+              profile: { firstName: 'John', lastName: 'Doe' },
+              is_email_verified: false,
+              created_at: new Date(),
+              updated_at: new Date(),
+            },
+          ],
         });
 
-      const response = await request(app)
-        .post('/')
-        .send(validUserData)
-        .expect(201);
+      const response = await request(app).post('/').send(validUserData).expect(201);
 
       expect(response.body).toHaveProperty('token');
       expect(response.body).toHaveProperty('refreshToken');
@@ -127,10 +132,7 @@ describe('Authentication API Integration Tests', () => {
     it('should reject registration with invalid email', async () => {
       const invalidUserData = { ...validUserData, email: 'invalid-email' };
 
-      const response = await request(app)
-        .post('/')
-        .send(invalidUserData)
-        .expect(400);
+      const response = await request(app).post('/').send(invalidUserData).expect(400);
 
       expect(response.body).toHaveProperty('error');
       expect(cognitoServiceMock.registerUser).not.toHaveBeenCalled();
@@ -139,23 +141,17 @@ describe('Authentication API Integration Tests', () => {
     it('should reject registration with weak password', async () => {
       const weakPasswordData = { ...validUserData, password: '123' };
 
-      const response = await request(app)
-        .post('/')
-        .send(weakPasswordData)
-        .expect(400);
+      const response = await request(app).post('/').send(weakPasswordData).expect(400);
 
       expect(response.body).toHaveProperty('error');
       expect(cognitoServiceMock.registerUser).not.toHaveBeenCalled();
     });
 
     it('should handle existing user', async () => {
-      const mockPool = require('../../config/database').pool;
+      const mockPool = pool as any;
       mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'existing-user' }] });
 
-      const response = await request(app)
-        .post('/')
-        .send(validUserData)
-        .expect(409);
+      const response = await request(app).post('/').send(validUserData).expect(409);
 
       expect(response.body.error).toBe('User already exists');
       expect(cognitoServiceMock.registerUser).not.toHaveBeenCalled();
@@ -176,26 +172,26 @@ describe('Authentication API Integration Tests', () => {
         refreshToken: 'refresh-token',
       });
 
-      const mockPool = require('../../config/database').pool;
+      const mockPool = pool as any;
       mockPool.query
-        .mockResolvedValueOnce({ // Get user
-          rows: [{
-            id: 'user-123',
-            email: 'test@example.com',
-            role: 'consumer',
-            profile: { firstName: 'John', lastName: 'Doe' },
-            is_email_verified: true,
-            created_at: new Date(),
-            updated_at: new Date(),
-            last_login_at: null,
-          }]
+        .mockResolvedValueOnce({
+          // Get user
+          rows: [
+            {
+              id: 'user-123',
+              email: 'test@example.com',
+              role: 'consumer',
+              profile: { firstName: 'John', lastName: 'Doe' },
+              is_email_verified: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+              last_login_at: null,
+            },
+          ],
         })
         .mockResolvedValueOnce({}); // Update last login
 
-      const response = await request(app)
-        .post('/')
-        .send(validCredentials)
-        .expect(200);
+      const response = await request(app).post('/').send(validCredentials).expect(200);
 
       expect(response.body).toHaveProperty('token');
       expect(response.body).toHaveProperty('refreshToken');
@@ -205,40 +201,32 @@ describe('Authentication API Integration Tests', () => {
 
     it('should reject login with invalid credentials', async () => {
       cognitoServiceMock.loginUser.mockRejectedValue(new Error('Invalid credentials'));
-      
-      const mockLockout = require('../../middleware/rateLimiting').AccountLockout;
-      mockLockout.recordFailedAttempt.mockResolvedValue({ attempts: 1, isLocked: false });
 
-      const response = await request(app)
-        .post('/')
-        .send(validCredentials)
-        .expect(401);
+      (AccountLockout as any).recordFailedAttempt.mockResolvedValue({
+        attempts: 1,
+        isLocked: false,
+      });
+
+      const response = await request(app).post('/').send(validCredentials).expect(401);
 
       expect(response.body.error).toBe('Invalid credentials');
-      expect(mockLockout.recordFailedAttempt).toHaveBeenCalledWith('test@example.com');
+      expect((AccountLockout as any).recordFailedAttempt).toHaveBeenCalledWith('test@example.com');
     });
 
     it('should handle account lockout', async () => {
-      const mockLockout = require('../../middleware/rateLimiting').AccountLockout;
-      mockLockout.isAccountLocked.mockResolvedValue({
+      (AccountLockout as any).isAccountLocked.mockResolvedValue({
         isLocked: true,
         lockoutExpires: new Date(Date.now() + 30 * 60 * 1000),
       });
 
-      const response = await request(app)
-        .post('/')
-        .send(validCredentials)
-        .expect(423);
+      const response = await request(app).post('/').send(validCredentials).expect(423);
 
       expect(response.body.error).toBe('Account temporarily locked');
       expect(cognitoServiceMock.loginUser).not.toHaveBeenCalled();
     });
 
     it('should reject login with missing fields', async () => {
-      const response = await request(app)
-        .post('/')
-        .send({ email: 'test@example.com' })
-        .expect(400);
+      const response = await request(app).post('/').send({ email: 'test@example.com' }).expect(400);
 
       expect(response.body).toHaveProperty('error');
       expect(cognitoServiceMock.loginUser).not.toHaveBeenCalled();
@@ -276,10 +264,7 @@ describe('Authentication API Integration Tests', () => {
     });
 
     it('should reject missing refresh token', async () => {
-      const response = await request(app)
-        .post('/')
-        .send({})
-        .expect(400);
+      const response = await request(app).post('/').send({}).expect(400);
 
       expect(response.body).toHaveProperty('error');
       expect(cognitoServiceMock.refreshToken).not.toHaveBeenCalled();
@@ -290,12 +275,6 @@ describe('Authentication API Integration Tests', () => {
     const app = createTestApp(logoutHandler);
 
     it('should successfully logout user', async () => {
-      // Mock authentication middleware to pass through
-      const mockAuthMiddleware = (req: any, res: any, next: any) => {
-        req.user = { id: 'user-123', email: 'test@example.com' };
-        next();
-      };
-      
       // Note: In real implementation, we'd need to properly mock the middleware chain
       const response = await request(app)
         .post('/')
@@ -306,9 +285,7 @@ describe('Authentication API Integration Tests', () => {
     });
 
     it('should reject logout without authentication', async () => {
-      const response = await request(app)
-        .post('/')
-        .expect(401);
+      const response = await request(app).post('/').expect(401);
 
       expect(response.body).toHaveProperty('error');
     });

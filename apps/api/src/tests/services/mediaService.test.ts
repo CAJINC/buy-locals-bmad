@@ -1,5 +1,4 @@
 import { MediaService } from '../../services/mediaService.js';
-import { S3_CONFIG } from '../../config/s3.js';
 
 // Mock S3 client
 jest.mock('../../config/s3.js', () => ({
@@ -8,8 +7,8 @@ jest.mock('../../config/s3.js', () => ({
     maxFileSize: 10 * 1024 * 1024, // 10MB
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
     allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
-    maxPhotosPerBusiness: 10
-  }
+    maxPhotosPerBusiness: 10,
+  },
 }));
 
 describe('MediaService', () => {
@@ -24,7 +23,7 @@ describe('MediaService', () => {
       const validFile = {
         size: 1024 * 1024, // 1MB
         mimetype: 'image/jpeg',
-        originalname: 'photo.jpg'
+        originalname: 'photo.jpg',
       };
 
       const result = mediaService.validateMediaFile(validFile);
@@ -36,7 +35,7 @@ describe('MediaService', () => {
       const largeFile = {
         size: 15 * 1024 * 1024, // 15MB
         mimetype: 'image/jpeg',
-        originalname: 'large-photo.jpg'
+        originalname: 'large-photo.jpg',
       };
 
       const result = mediaService.validateMediaFile(largeFile);
@@ -48,24 +47,28 @@ describe('MediaService', () => {
       const invalidFile = {
         size: 1024 * 1024,
         mimetype: 'application/pdf',
-        originalname: 'document.pdf'
+        originalname: 'document.pdf',
       };
 
       const result = mediaService.validateMediaFile(invalidFile);
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.');
+      expect(result.errors).toContain(
+        'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.'
+      );
     });
 
     it('should reject invalid file extensions', () => {
       const invalidFile = {
         size: 1024 * 1024,
         mimetype: 'image/jpeg',
-        originalname: 'photo.exe'
+        originalname: 'photo.exe',
       };
 
       const result = mediaService.validateMediaFile(invalidFile);
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Invalid file extension. Only .jpg, .jpeg, .png, .webp, .gif files are allowed.');
+      expect(result.errors).toContain(
+        'Invalid file extension. Only .jpg, .jpeg, .png, .webp, .gif files are allowed.'
+      );
     });
 
     it('should reject files with malicious filenames', () => {
@@ -74,7 +77,7 @@ describe('MediaService', () => {
         { size: 1024, mimetype: 'image/png', originalname: 'photo<script>.png' },
         { size: 1024, mimetype: 'image/gif', originalname: 'CON.gif' },
         { size: 1024, mimetype: 'image/webp', originalname: '.hidden.webp' },
-        { size: 1024, mimetype: 'image/jpeg', originalname: 'virus.exe.jpg' }
+        { size: 1024, mimetype: 'image/jpeg', originalname: 'virus.exe.jpg' },
       ];
 
       maliciousFiles.forEach(file => {
@@ -90,7 +93,7 @@ describe('MediaService', () => {
         { size: 1024, mimetype: 'image/jpeg', originalname: 'photo.jpeg' },
         { size: 1024, mimetype: 'image/png', originalname: 'logo.png' },
         { size: 1024, mimetype: 'image/webp', originalname: 'modern.webp' },
-        { size: 1024, mimetype: 'image/gif', originalname: 'animation.gif' }
+        { size: 1024, mimetype: 'image/gif', originalname: 'animation.gif' },
       ];
 
       validFiles.forEach(file => {
@@ -104,7 +107,7 @@ describe('MediaService', () => {
       const invalidFile = {
         size: 20 * 1024 * 1024, // Too large
         mimetype: 'application/pdf', // Wrong type
-        originalname: '../malicious.exe' // Malicious filename
+        originalname: '../malicious.exe', // Malicious filename
       };
 
       const result = mediaService.validateMediaFile(invalidFile);

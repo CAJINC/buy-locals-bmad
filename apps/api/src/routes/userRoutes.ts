@@ -2,11 +2,10 @@ import { Router } from 'express';
 import { UserService } from '../services/userService.js';
 import { validateBody, validateQuery } from '../middleware/validation.js';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
-import { 
-  createUserSchema, 
-  getUsersQuerySchema, 
-  updatePasswordSchema, 
-  updateUserProfileSchema 
+import {
+  getUsersQuerySchema,
+  updatePasswordSchema,
+  updateUserProfileSchema,
 } from '../schemas/userSchemas.js';
 import { errorResponse, paginatedResponse, successResponse } from '../utils/responseUtils.js';
 import { NextFunction, Request, Response } from 'express';
@@ -36,9 +35,10 @@ router.get('/profile', authMiddleware, async (req: Request, res: Response, next:
  * PUT /api/users/profile
  * Update authenticated user's profile
  */
-router.put('/profile', 
-  authMiddleware, 
-  validateBody(updateUserProfileSchema), 
+router.put(
+  '/profile',
+  authMiddleware,
+  validateBody(updateUserProfileSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?.id;
@@ -58,9 +58,10 @@ router.put('/profile',
  * GET /api/users/:userId
  * Get user by ID (admin only)
  */
-router.get('/:userId', 
-  authMiddleware, 
-  requireRole(['admin']), 
+router.get(
+  '/:userId',
+  authMiddleware,
+  requireRole(['admin']),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
@@ -76,10 +77,11 @@ router.get('/:userId',
  * GET /api/users
  * Get all users with pagination (admin only)
  */
-router.get('/', 
-  authMiddleware, 
-  requireRole(['admin']), 
-  validateQuery(getUsersQuerySchema), 
+router.get(
+  '/',
+  authMiddleware,
+  requireRole(['admin']),
+  validateQuery(getUsersQuerySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { page, limit, role } = req.query as any;
@@ -88,7 +90,7 @@ router.get('/',
         parseInt(limit) || 10,
         role
       );
-      
+
       return paginatedResponse(res, users, totalCount, parseInt(page) || 1, parseInt(limit) || 10);
     } catch (error) {
       next(error);
@@ -100,14 +102,15 @@ router.get('/',
  * PUT /api/users/password
  * Update authenticated user's password
  */
-router.put('/password', 
-  authMiddleware, 
-  validateBody(updatePasswordSchema), 
+router.put(
+  '/password',
+  authMiddleware,
+  validateBody(updatePasswordSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?.id;
       const userEmail = req.user?.email;
-      
+
       if (!userId || !userEmail) {
         return errorResponse(res, 401, 'User not authenticated');
       }
@@ -132,13 +135,14 @@ router.put('/password',
  * DELETE /api/users/:userId
  * Delete user (admin only)
  */
-router.delete('/:userId', 
-  authMiddleware, 
-  requireRole(['admin']), 
+router.delete(
+  '/:userId',
+  authMiddleware,
+  requireRole(['admin']),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
-      
+
       // Prevent admin from deleting themselves
       if (userId === req.user?.id) {
         return errorResponse(res, 400, 'Cannot delete your own account');

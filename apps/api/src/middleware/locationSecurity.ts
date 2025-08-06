@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import { z } from 'zod';
 import { redisClient } from '../config/redis.js';
 
 // Rate limiting per IP for location requests
@@ -9,7 +8,7 @@ const RATE_LIMIT_PREFIX = 'location_rate_limit';
 
 // Security thresholds
 const MAX_RADIUS_KM = 500; // Maximum search radius
-const MIN_RADIUS_KM = 0.1;  // Minimum search radius
+const MIN_RADIUS_KM = 0.1; // Minimum search radius
 const MAX_SEARCH_LENGTH = 100; // Maximum search string length
 const SUSPICIOUS_PATTERN_THRESHOLD = 10; // Requests to flag as suspicious
 
@@ -23,7 +22,12 @@ export interface LocationSecurityContext {
 }
 
 export interface SecurityViolation {
-  type: 'rate_limit' | 'invalid_coordinates' | 'suspicious_pattern' | 'malicious_input' | 'excessive_radius';
+  type:
+    | 'rate_limit'
+    | 'invalid_coordinates'
+    | 'suspicious_pattern'
+    | 'malicious_input'
+    | 'excessive_radius';
   severity: 'low' | 'medium' | 'high';
   description: string;
   context: LocationSecurityContext;
@@ -43,11 +47,11 @@ export const locationSecurityMiddleware = async (
       userAgent: req.headers['user-agent'],
       coordinates: {
         lat: parseFloat(req.query.lat as string),
-        lng: parseFloat(req.query.lng as string)
+        lng: parseFloat(req.query.lng as string),
       },
       radius: req.query.radius ? parseFloat(req.query.radius as string) : undefined,
       searchText: req.query.search as string,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     // 1. Rate limiting check
@@ -57,13 +61,13 @@ export const locationSecurityMiddleware = async (
         type: 'rate_limit',
         severity: 'medium',
         description: `Rate limit exceeded: ${rateLimitResult.requests}/${RATE_LIMIT_MAX_REQUESTS} requests in last minute`,
-        context: securityContext
+        context: securityContext,
       });
 
       res.status(429).json({
         success: false,
         error: 'Rate limit exceeded',
-        retryAfter: Math.ceil(rateLimitResult.resetTime / 1000)
+        retryAfter: Math.ceil(rateLimitResult.resetTime / 1000),
       });
       return;
     }
@@ -75,13 +79,13 @@ export const locationSecurityMiddleware = async (
         type: 'invalid_coordinates',
         severity: 'low',
         description: coordinateValidation.reason || 'Invalid coordinates',
-        context: securityContext
+        context: securityContext,
       });
 
       res.status(400).json({
         success: false,
         error: 'Invalid coordinates',
-        details: coordinateValidation.reason
+        details: coordinateValidation.reason,
       });
       return;
     }
@@ -94,13 +98,13 @@ export const locationSecurityMiddleware = async (
           type: 'excessive_radius',
           severity: radiusValidation.severity,
           description: radiusValidation.reason || 'Invalid radius',
-          context: securityContext
+          context: securityContext,
         });
 
         res.status(400).json({
           success: false,
           error: 'Invalid radius',
-          details: radiusValidation.reason
+          details: radiusValidation.reason,
         });
         return;
       }
@@ -114,13 +118,13 @@ export const locationSecurityMiddleware = async (
           type: 'malicious_input',
           severity: inputValidation.severity,
           description: inputValidation.reason || 'Malicious input detected',
-          context: securityContext
+          context: securityContext,
         });
 
         res.status(400).json({
           success: false,
           error: 'Invalid search input',
-          details: 'Search text contains invalid characters'
+          details: 'Search text contains invalid characters',
         });
         return;
       }
@@ -136,13 +140,13 @@ export const locationSecurityMiddleware = async (
         type: 'suspicious_pattern',
         severity: 'medium',
         description: behaviorCheck.reason || 'Suspicious behavior detected',
-        context: securityContext
+        context: securityContext,
       });
 
       // Don't block, but log for monitoring
       console.warn('Suspicious location request pattern detected:', {
         ip: securityContext.ipAddress,
-        reason: behaviorCheck.reason
+        reason: behaviorCheck.reason,
       });
     }
 
@@ -152,7 +156,7 @@ export const locationSecurityMiddleware = async (
     next();
   } catch (error) {
     console.error('Location security middleware error:', error);
-    
+
     // Don't block requests due to security middleware errors
     next();
   }
@@ -177,18 +181,18 @@ async function checkRateLimit(ipAddress: string): Promise<{
   try {
     // Remove expired entries
     await redisClient.zremrangebyscore(key, 0, windowStart);
-    
+
     // Count current requests
     const requestCount = await redisClient.zcard(key);
-    
+
     if (requestCount >= RATE_LIMIT_MAX_REQUESTS) {
       const resetTime = await redisClient.zrange(key, 0, 0, 'WITHSCORES');
       const oldestRequest = resetTime.length > 1 ? parseInt(resetTime[1]) : now;
-      
+
       return {
         allowed: false,
         requests: requestCount,
-        resetTime: oldestRequest + RATE_LIMIT_WINDOW
+        resetTime: oldestRequest + RATE_LIMIT_WINDOW,
       };
     }
 
@@ -199,7 +203,7 @@ async function checkRateLimit(ipAddress: string): Promise<{
     return {
       allowed: true,
       requests: requestCount + 1,
-      resetTime: 0
+      resetTime: 0,
     };
   } catch (error) {
     console.error('Rate limit check error:', error);
@@ -233,7 +237,7 @@ function validateCoordinates(coordinates: { lat: number; lng: number }): {
   // Check for suspicious precision (potential bot/scraping behavior)
   const latDecimalPlaces = getDecimalPlaces(lat);
   const lngDecimalPlaces = getDecimalPlaces(lng);
-  
+
   if (latDecimalPlaces > 10 || lngDecimalPlaces > 10) {
     return { valid: false, reason: 'Excessive coordinate precision detected' };
   }
@@ -255,26 +259,26 @@ function validateRadius(radius: number): {
   reason?: string;
 } {
   if (isNaN(radius) || radius <= 0) {
-    return { 
-      valid: false, 
+    return {
+      valid: false,
       severity: 'low',
-      reason: 'Radius must be a positive number' 
+      reason: 'Radius must be a positive number',
     };
   }
 
   if (radius < MIN_RADIUS_KM) {
-    return { 
-      valid: false, 
+    return {
+      valid: false,
       severity: 'low',
-      reason: `Radius must be at least ${MIN_RADIUS_KM} km` 
+      reason: `Radius must be at least ${MIN_RADIUS_KM} km`,
     };
   }
 
   if (radius > MAX_RADIUS_KM) {
-    return { 
-      valid: false, 
+    return {
+      valid: false,
       severity: radius > 1000 ? 'high' : 'medium',
-      reason: `Radius cannot exceed ${MAX_RADIUS_KM} km` 
+      reason: `Radius cannot exceed ${MAX_RADIUS_KM} km`,
     };
   }
 
@@ -295,10 +299,10 @@ function validateSearchInput(searchText: string): {
 
   // Check length
   if (searchText.length > MAX_SEARCH_LENGTH) {
-    return { 
-      valid: false, 
+    return {
+      valid: false,
       severity: 'low',
-      reason: `Search text cannot exceed ${MAX_SEARCH_LENGTH} characters` 
+      reason: `Search text cannot exceed ${MAX_SEARCH_LENGTH} characters`,
     };
   }
 
@@ -306,15 +310,15 @@ function validateSearchInput(searchText: string): {
   const sqlPatterns = [
     /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/i,
     /('|('')|;|--|\/\*|\*\/)/i,
-    /((\%27)|(\'))((\%6F)|o|(\%4F))((\%72)|r|(\%52))/i
+    /((%27)|('))((%6F)|o|(%4F))((%72)|r|(%52))/i,
   ];
 
   for (const pattern of sqlPatterns) {
     if (pattern.test(searchText)) {
-      return { 
-        valid: false, 
+      return {
+        valid: false,
         severity: 'high',
-        reason: 'Potential SQL injection detected' 
+        reason: 'Potential SQL injection detected',
       };
     }
   }
@@ -324,31 +328,28 @@ function validateSearchInput(searchText: string): {
     /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
     /javascript:/gi,
     /on\w+\s*=/gi,
-    /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi
+    /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
   ];
 
   for (const pattern of xssPatterns) {
     if (pattern.test(searchText)) {
-      return { 
-        valid: false, 
+      return {
+        valid: false,
         severity: 'high',
-        reason: 'Potential XSS attack detected' 
+        reason: 'Potential XSS attack detected',
       };
     }
   }
 
   // Command injection patterns
-  const commandPatterns = [
-    /[;&|`$(){}[\]]/,
-    /\b(rm|mkdir|cp|mv|cat|echo|wget|curl|nc|netcat)\b/i
-  ];
+  const commandPatterns = [/[;&|`$(){}[\]]/, /\b(rm|mkdir|cp|mv|cat|echo|wget|curl|nc|netcat)\b/i];
 
   for (const pattern of commandPatterns) {
     if (pattern.test(searchText)) {
-      return { 
-        valid: false, 
+      return {
+        valid: false,
         severity: 'medium',
-        reason: 'Potential command injection detected' 
+        reason: 'Potential command injection detected',
       };
     }
   }
@@ -362,7 +363,7 @@ function validateSearchInput(searchText: string): {
 function sanitizeSearchInput(input: string): string {
   return input
     .replace(/[<>'"]/g, '') // Remove potentially dangerous characters
-    .replace(/\s+/g, ' ')   // Normalize whitespace
+    .replace(/\s+/g, ' ') // Normalize whitespace
     .trim()
     .substring(0, MAX_SEARCH_LENGTH); // Ensure length limit
 }
@@ -381,7 +382,7 @@ async function checkSuspiciousBehavior(context: LocationSecurityContext): Promis
   const { ipAddress, coordinates } = context;
   const behaviorKey = `location_behavior:${ipAddress}`;
   const now = Date.now();
-  const windowStart = now - (5 * 60 * 1000); // 5 minute window
+  const windowStart = now - 5 * 60 * 1000; // 5 minute window
 
   try {
     // Track coordinate requests from this IP
@@ -390,25 +391,27 @@ async function checkSuspiciousBehavior(context: LocationSecurityContext): Promis
       now,
       JSON.stringify({ lat: coordinates.lat, lng: coordinates.lng, timestamp: now })
     );
-    
+
     // Remove old entries
     await redisClient.zremrangebyscore(behaviorKey, 0, windowStart);
     await redisClient.expire(behaviorKey, 300); // 5 minutes
 
     // Get recent requests
     const recentRequests = await redisClient.zrange(behaviorKey, 0, -1);
-    
+
     if (recentRequests.length > SUSPICIOUS_PATTERN_THRESHOLD) {
-      const coordinates = recentRequests.map(req => {
-        try {
-          return JSON.parse(req);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
+      const coordinates = recentRequests
+        .map(req => {
+          try {
+            return JSON.parse(req);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
 
       // Check for patterns that indicate bot/scraping behavior
-      
+
       // 1. Too many requests from same location
       const locationCounts = new Map();
       coordinates.forEach(coord => {
@@ -418,20 +421,20 @@ async function checkSuspiciousBehavior(context: LocationSecurityContext): Promis
 
       const maxLocationCount = Math.max(...Array.from(locationCounts.values()));
       if (maxLocationCount > 5) {
-        return { 
-          suspicious: true, 
-          reason: `Too many requests from same location: ${maxLocationCount}` 
+        return {
+          suspicious: true,
+          reason: `Too many requests from same location: ${maxLocationCount}`,
         };
       }
 
       // 2. Grid-like search patterns (systematic scraping)
       const sortedCoords = coordinates.sort((a, b) => a.lat - b.lat || a.lng - b.lng);
       let gridLikePattern = 0;
-      
+
       for (let i = 1; i < sortedCoords.length; i++) {
-        const latDiff = Math.abs(sortedCoords[i].lat - sortedCoords[i-1].lat);
-        const lngDiff = Math.abs(sortedCoords[i].lng - sortedCoords[i-1].lng);
-        
+        const latDiff = Math.abs(sortedCoords[i].lat - sortedCoords[i - 1].lat);
+        const lngDiff = Math.abs(sortedCoords[i].lng - sortedCoords[i - 1].lng);
+
         // Check for regular intervals
         if ((latDiff > 0 && latDiff < 0.1) || (lngDiff > 0 && lngDiff < 0.1)) {
           gridLikePattern++;
@@ -439,22 +442,23 @@ async function checkSuspiciousBehavior(context: LocationSecurityContext): Promis
       }
 
       if (gridLikePattern > coordinates.length * 0.7) {
-        return { 
-          suspicious: true, 
-          reason: 'Grid-like search pattern detected (potential scraping)' 
+        return {
+          suspicious: true,
+          reason: 'Grid-like search pattern detected (potential scraping)',
         };
       }
 
       // 3. High frequency requests
-      const timeSpans = coordinates.slice(1).map((coord, i) => 
-        coord.timestamp - coordinates[i].timestamp
-      );
-      
+      const timeSpans = coordinates
+        .slice(1)
+        .map((coord, i) => coord.timestamp - coordinates[i].timestamp);
+
       const avgTimeSpan = timeSpans.reduce((sum, span) => sum + span, 0) / timeSpans.length;
-      if (avgTimeSpan < 1000) { // Less than 1 second between requests
-        return { 
-          suspicious: true, 
-          reason: `High frequency requests detected: ${avgTimeSpan.toFixed(0)}ms average` 
+      if (avgTimeSpan < 1000) {
+        // Less than 1 second between requests
+        return {
+          suspicious: true,
+          reason: `High frequency requests detected: ${avgTimeSpan.toFixed(0)}ms average`,
         };
       }
     }
@@ -473,7 +477,7 @@ async function logSecurityViolation(violation: SecurityViolation): Promise<void>
   const logEntry = {
     ...violation,
     timestamp: new Date().toISOString(),
-    id: `violation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    id: `violation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
 
   // Log to console
@@ -483,7 +487,7 @@ async function logSecurityViolation(violation: SecurityViolation): Promise<void>
     severity: violation.severity,
     ip: violation.context.ipAddress,
     coordinates: violation.context.coordinates,
-    description: violation.description
+    description: violation.description,
   });
 
   // Store in Redis for analysis
@@ -492,7 +496,7 @@ async function logSecurityViolation(violation: SecurityViolation): Promise<void>
       await Promise.all([
         redisClient.lpush('location_security_violations', JSON.stringify(logEntry)),
         redisClient.ltrim('location_security_violations', 0, 999), // Keep last 1000 violations
-        redisClient.expire('location_security_violations', 7 * 24 * 3600) // 7 days
+        redisClient.expire('location_security_violations', 7 * 24 * 3600), // 7 days
       ]);
     } catch (error) {
       console.error('Failed to store security violation:', error);
@@ -548,25 +552,25 @@ export async function getLocationSecurityMetrics(days: number = 7): Promise<{
       totalViolations: 0,
       violationsByType: {},
       violationsBySeverity: {},
-      topViolatingIPs: []
+      topViolatingIPs: [],
     };
   }
 
   try {
     const violations = await redisClient.lrange('location_security_violations', 0, -1);
-    const parsed = violations.map(v => {
-      try {
-        return JSON.parse(v);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
+    const parsed = violations
+      .map(v => {
+        try {
+          return JSON.parse(v);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     // Filter by time window
-    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
-    const recentViolations = parsed.filter(v => 
-      new Date(v.timestamp).getTime() > cutoff
-    );
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const recentViolations = parsed.filter(v => new Date(v.timestamp).getTime() > cutoff);
 
     const violationsByType: Record<string, number> = {};
     const violationsBySeverity: Record<string, number> = {};
@@ -574,7 +578,8 @@ export async function getLocationSecurityMetrics(days: number = 7): Promise<{
 
     recentViolations.forEach((violation: any) => {
       violationsByType[violation.type] = (violationsByType[violation.type] || 0) + 1;
-      violationsBySeverity[violation.severity] = (violationsBySeverity[violation.severity] || 0) + 1;
+      violationsBySeverity[violation.severity] =
+        (violationsBySeverity[violation.severity] || 0) + 1;
       ipCounts[violation.context.ipAddress] = (ipCounts[violation.context.ipAddress] || 0) + 1;
     });
 
@@ -587,7 +592,7 @@ export async function getLocationSecurityMetrics(days: number = 7): Promise<{
       totalViolations: recentViolations.length,
       violationsByType,
       violationsBySeverity,
-      topViolatingIPs
+      topViolatingIPs,
     };
   } catch (error) {
     console.error('Failed to get security metrics:', error);
@@ -595,7 +600,7 @@ export async function getLocationSecurityMetrics(days: number = 7): Promise<{
       totalViolations: 0,
       violationsByType: {},
       violationsBySeverity: {},
-      topViolatingIPs: []
+      topViolatingIPs: [],
     };
   }
 }
