@@ -10,8 +10,8 @@ import { validateBody } from '../../middleware/validation.js';
 import { CognitoService } from '../../services/cognitoService.js';
 import { LoginRequest } from '@buy-locals/shared';
 import { loginSchema } from '../../schemas/authSchemas.js';
-import { authRateLimit, AccountLockout } from '../../middleware/rateLimiting.js';
-import { securityHeaders, sanitizeInput, auditLogger } from '../../middleware/security.js';
+import { AccountLockout, authRateLimit } from '../../middleware/rateLimiting.js';
+import { auditLogger, sanitizeInput, securityHeaders } from '../../middleware/security.js';
 
 validateEnvironment();
 

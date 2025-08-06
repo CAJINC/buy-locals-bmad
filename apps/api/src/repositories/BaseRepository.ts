@@ -173,7 +173,7 @@ export abstract class BaseRepository<T> {
     const whereConditions = whereKeys.map((key, index) => `${key} = $${index + 1}`);
 
     let query = `SELECT * FROM ${this.tableName} WHERE ${whereConditions.join(' AND ')}`;
-    let params = whereValues;
+    const params = whereValues;
 
     if (options.orderBy) {
       query += ` ORDER BY ${options.orderBy} ${options.orderDirection || 'ASC'}`;

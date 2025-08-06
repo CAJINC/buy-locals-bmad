@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from '@jest/globals';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { app } from '../../app.js';
@@ -13,7 +13,7 @@ describe('Location Search Integration Tests', () => {
   beforeAll(async () => {
     pool = new Pool({
       ...config,
-      database: config.database + '_test',
+      database: `${config.database  }_test`,
     });
   });
 
@@ -443,7 +443,7 @@ describe('Location Search Integration Tests', () => {
       // Restore connection for cleanup
       pool = new Pool({
         ...config,
-        database: config.database + '_test',
+        database: `${config.database  }_test`,
       });
     });
   });

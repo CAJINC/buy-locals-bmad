@@ -4,10 +4,10 @@ import { ValidationService } from './validationService.js';
 import { 
   Business, 
   BusinessLocation,
-  CreateBusinessRequest, 
-  UpdateBusinessRequest, 
+  BusinessResponseDto, 
   BusinessSearchQuery, 
-  BusinessResponseDto 
+  CreateBusinessRequest, 
+  UpdateBusinessRequest 
 } from '../types/Business.js';
 import { createError } from '../middleware/errorHandler.js';
 

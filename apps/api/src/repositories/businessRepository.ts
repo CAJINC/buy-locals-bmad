@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository.js';
-import { Business, CreateBusinessRequest, BusinessSearchQuery } from '../types/Business.js';
+import { Business, BusinessSearchQuery, CreateBusinessRequest } from '../types/Business.js';
 
 export class BusinessRepository extends BaseRepository<Business> {
   constructor() {
@@ -59,8 +59,8 @@ export class BusinessRepository extends BaseRepository<Business> {
     }
 
     // Fallback to original JSONB-based search for non-location queries
-    let whereConditions: string[] = ['is_active = true'];
-    let params: any[] = [];
+    const whereConditions: string[] = ['is_active = true'];
+    const params: any[] = [];
     let paramIndex = 1;
 
     // Category filter
@@ -90,7 +90,7 @@ export class BusinessRepository extends BaseRepository<Business> {
     params.push(limit, offset);
 
     // Count query for pagination
-    let countQuery = `
+    const countQuery = `
       SELECT COUNT(*) 
       FROM businesses 
       WHERE ${whereConditions.join(' AND ')}

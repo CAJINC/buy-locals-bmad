@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import { config, validateEnvironment } from '../../config/environment.js';
 import { errorHandler } from '../../middleware/errorHandler.js';
 import { validateBody } from '../../middleware/validation.js';
-import { authenticateToken, AuthenticatedRequest } from '../../middleware/auth.js';
+import { AuthenticatedRequest, authenticateToken } from '../../middleware/auth.js';
 import { BusinessService } from '../../services/businessService.js';
 import { createBusinessSchema } from '../../schemas/businessSchemas.js';
 import { CreateBusinessRequest } from '../../types/Business.js';

@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { createRateLimit, AccountLockout } from '../../middleware/rateLimiting';
+import { NextFunction, Request, Response } from 'express';
+import { AccountLockout, createRateLimit } from '../../middleware/rateLimiting';
 import { createClient } from 'redis';
 
 // Mock Redis client

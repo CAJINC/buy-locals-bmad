@@ -1,4 +1,4 @@
-import { BusinessLocation, BusinessContact } from '../types/Business.js';
+import { BusinessContact, BusinessLocation } from '../types/Business.js';
 
 export class ValidationService {
   /**

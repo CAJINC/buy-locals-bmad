@@ -5,7 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config, validateEnvironment } from '../../config/environment.js';
 import { errorHandler } from '../../middleware/errorHandler.js';
-import { authenticateCognito, CognitoAuthenticatedRequest } from '../../middleware/cognitoAuth.js';
+import { CognitoAuthenticatedRequest, authenticateCognito } from '../../middleware/cognitoAuth.js';
 
 validateEnvironment();
 

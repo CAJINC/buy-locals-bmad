@@ -1,11 +1,11 @@
 import { CognitoService } from '../../services/cognitoService';
 import { CreateUserRequest } from '@buy-locals/shared';
 import {
-  CognitoIdentityProviderClient,
   AdminCreateUserCommand,
-  AdminSetUserPasswordCommand,
-  AdminInitiateAuthCommand,
   AdminGetUserCommand,
+  AdminInitiateAuthCommand,
+  AdminSetUserPasswordCommand,
+  CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 
 // Mock AWS SDK

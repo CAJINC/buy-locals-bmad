@@ -6,9 +6,9 @@ import helmet from 'helmet';
 import { config, validateEnvironment } from '../../config/environment.js';
 import { errorHandler } from '../../middleware/errorHandler.js';
 import { validateBody, validateParams } from '../../middleware/validation.js';
-import { authenticateToken, AuthenticatedRequest } from '../../middleware/auth.js';
+import { AuthenticatedRequest, authenticateToken } from '../../middleware/auth.js';
 import { BusinessService } from '../../services/businessService.js';
-import { updateBusinessSchema, businessIdParamSchema } from '../../schemas/businessSchemas.js';
+import { businessIdParamSchema, updateBusinessSchema } from '../../schemas/businessSchemas.js';
 import { UpdateBusinessRequest } from '../../types/Business.js';
 
 validateEnvironment();

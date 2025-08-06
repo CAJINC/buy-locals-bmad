@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { config } from '../config/environment.js';
 

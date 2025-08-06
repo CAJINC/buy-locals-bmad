@@ -1,5 +1,5 @@
 import { UserRepository } from '../repositories/userRepository.js';
-import { User, CreateUserRequest, UpdateUserProfileRequest, UserResponseDto } from '../types/User.js';
+import { CreateUserRequest, UpdateUserProfileRequest, User, UserResponseDto } from '../types/User.js';
 import { createError } from '../middleware/errorHandler.js';
 
 export class UserService {

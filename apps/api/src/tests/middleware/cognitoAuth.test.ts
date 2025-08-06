@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { authenticateCognito, requireRole, CognitoAuthenticatedRequest } from '../../middleware/cognitoAuth';
+import { NextFunction, Request, Response } from 'express';
+import { CognitoAuthenticatedRequest, authenticateCognito, requireRole } from '../../middleware/cognitoAuth';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 
 // Mock aws-jwt-verify

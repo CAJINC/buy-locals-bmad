@@ -4,12 +4,12 @@ import { validateBody, validateQuery } from '../middleware/validation.js';
 import { authMiddleware, requireRole } from '../middleware/auth.js';
 import { 
   createUserSchema, 
-  updateUserProfileSchema, 
   getUsersQuerySchema, 
-  updatePasswordSchema 
+  updatePasswordSchema, 
+  updateUserProfileSchema 
 } from '../schemas/userSchemas.js';
-import { successResponse, errorResponse, paginatedResponse } from '../utils/responseUtils.js';
-import { Request, Response, NextFunction } from 'express';
+import { errorResponse, paginatedResponse, successResponse } from '../utils/responseUtils.js';
+import { NextFunction, Request, Response } from 'express';
 
 const router = Router();
 const userService = new UserService();

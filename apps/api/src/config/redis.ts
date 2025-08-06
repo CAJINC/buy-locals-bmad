@@ -1,4 +1,4 @@
-import { createClient, RedisClientType } from 'redis';
+import { RedisClientType, createClient } from 'redis';
 
 // Enhanced Redis configuration for location-based caching
 const redisConfig = {

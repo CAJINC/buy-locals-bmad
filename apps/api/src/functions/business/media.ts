@@ -7,7 +7,7 @@ import multer from 'multer';
 import { config, validateEnvironment } from '../../config/environment.js';
 import { errorHandler } from '../../middleware/errorHandler.js';
 import { validateParams } from '../../middleware/validation.js';
-import { authenticateToken, AuthenticatedRequest } from '../../middleware/auth.js';
+import { AuthenticatedRequest, authenticateToken } from '../../middleware/auth.js';
 import { MediaService } from '../../services/mediaService.js';
 import { BusinessService } from '../../services/businessService.js';
 import { businessIdParamSchema } from '../../schemas/businessSchemas.js';

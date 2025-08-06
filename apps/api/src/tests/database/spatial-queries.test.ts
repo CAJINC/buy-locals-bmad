@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { beforeAll, afterAll, describe, test, expect, beforeEach } from '@jest/globals';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from '@jest/globals';
 import { config } from '../../config/database.js';
 
 describe('PostGIS Spatial Queries', () => {
@@ -9,7 +9,7 @@ describe('PostGIS Spatial Queries', () => {
     pool = new Pool({
       ...config,
       // Use test database
-      database: config.database + '_test',
+      database: `${config.database  }_test`,
     });
 
     // Ensure PostGIS extension is available

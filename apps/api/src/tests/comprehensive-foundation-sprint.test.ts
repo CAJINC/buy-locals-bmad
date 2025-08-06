@@ -10,10 +10,10 @@
  * - Production readiness
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from '@jest/globals';
 import { Pool } from 'pg';
 import request from 'supertest';
-import { createClient, RedisClientType } from 'redis';
+import { RedisClientType, createClient } from 'redis';
 
 // Test Configuration
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/buy_locals_test';

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/environment.js';
 import { errorResponse } from '../utils/responseUtils.js';
@@ -119,7 +119,7 @@ export const generateToken = (user: { id: string; email: string; role: string })
 export const generateRefreshToken = (userId: string): string => {
   return jwt.sign(
     { userId },
-    config.jwtSecret + '_refresh',
+    `${config.jwtSecret  }_refresh`,
     {
       expiresIn: '7d',
       issuer: 'buy-locals-api',

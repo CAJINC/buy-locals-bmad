@@ -12,7 +12,7 @@ import { CognitoService } from '../../services/cognitoService.js';
 import { CreateUserRequest } from '@buy-locals/shared';
 import { registerSchema } from '../../schemas/authSchemas.js';
 import { registrationRateLimit } from '../../middleware/rateLimiting.js';
-import { securityHeaders, sanitizeInput, auditLogger } from '../../middleware/security.js';
+import { auditLogger, sanitizeInput, securityHeaders } from '../../middleware/security.js';
 
 validateEnvironment();
 

@@ -1,12 +1,12 @@
 import { 
-  S3Client, 
-  PutObjectCommand, 
   DeleteObjectCommand, 
-  GetObjectCommand,
-  HeadObjectCommand
+  GetObjectCommand, 
+  HeadObjectCommand, 
+  PutObjectCommand,
+  S3Client
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { s3Client, S3_CONFIG } from '../config/s3.js';
+import { S3_CONFIG, s3Client } from '../config/s3.js';
 import { createError } from '../middleware/errorHandler.js';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
@@ -336,7 +336,7 @@ export class MediaService {
    * Get file extension from filename
    */
   private getFileExtension(filename: string): string {
-    return '.' + filename.split('.').pop()?.toLowerCase() || '';
+    return `.${  filename.split('.').pop()?.toLowerCase()}` || '';
   }
 
   /**

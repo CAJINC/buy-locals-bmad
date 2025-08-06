@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
 import { locationSearchService } from '../../services/locationSearchService';
-import { redisClient, connectRedis, disconnectRedis } from '../../config/redis';
+import { connectRedis, disconnectRedis, redisClient } from '../../config/redis';
 import { pool } from '../../config/database';
 
 describe('Location Search Performance Tests', () => {

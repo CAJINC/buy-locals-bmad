@@ -1,6 +1,6 @@
 import { CognitoService } from '../../services/cognitoService';
 import { AccountLockout } from '../../middleware/rateLimiting';
-import { registerSchema, loginSchema } from '../../schemas/authSchemas';
+import { loginSchema, registerSchema } from '../../schemas/authSchemas';
 
 describe('Authentication Edge Cases', () => {
   describe('CognitoService Edge Cases', () => {
@@ -59,7 +59,7 @@ describe('Authentication Edge Cases', () => {
 
     describe('Edge Case Inputs', () => {
       it('should handle extremely long email addresses', async () => {
-        const longEmail = 'a'.repeat(240) + '@example.com'; // 251 chars total
+        const longEmail = `${'a'.repeat(240)  }@example.com`; // 251 chars total
         
         const validation = registerSchema.validate({
           email: longEmail,

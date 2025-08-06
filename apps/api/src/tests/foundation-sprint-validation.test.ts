@@ -3,7 +3,7 @@
  * Production-Ready Testing Suite for Location-Based Business Discovery
  */
 
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 // Mock dependencies to focus on testing logic without external services
 jest.mock('pg', () => ({
@@ -301,7 +301,7 @@ describe('Foundation Sprint Production Validation', () => {
       // Mock rate limiting logic
       const rateLimiter = {
         requests: new Map<string, { count: number, windowStart: number }>(),
-        checkLimit: function(clientIP: string, windowMs: number = 60000, maxRequests: number = 100) {
+        checkLimit(clientIP: string, windowMs: number = 60000, maxRequests: number = 100) {
           const now = Date.now();
           const windowStart = Math.floor(now / windowMs) * windowMs;
           const key = `${clientIP}:${windowStart}`;
@@ -431,15 +431,15 @@ describe('Foundation Sprint Production Validation', () => {
         databaseQueries: [] as { query: string, executionTime: number, timestamp: number }[],
         apiRequests: [] as { endpoint: string, responseTime: number, statusCode: number, timestamp: number }[],
         
-        recordDatabaseQuery: function(query: string, executionTime: number) {
+        recordDatabaseQuery(query: string, executionTime: number) {
           this.databaseQueries.push({ query, executionTime, timestamp: Date.now() });
         },
         
-        recordApiRequest: function(endpoint: string, responseTime: number, statusCode: number) {
+        recordApiRequest(endpoint: string, responseTime: number, statusCode: number) {
           this.apiRequests.push({ endpoint, responseTime, statusCode, timestamp: Date.now() });
         },
         
-        getPerformanceAlerts: function() {
+        getPerformanceAlerts() {
           const slowQueries = this.databaseQueries.filter(q => q.executionTime > 200);
           const slowRequests = this.apiRequests.filter(r => r.responseTime > 1000);
           const errorRequests = this.apiRequests.filter(r => r.statusCode >= 400);
@@ -483,7 +483,7 @@ describe('Foundation Sprint Production Validation', () => {
           { id: '2', name: 'Business 2', location: '{}', location_point: 'POINT(-73 41)' }
         ],
         
-        simulateRollback: async function() {
+        async simulateRollback() {
           // Simulate dropping spatial column while preserving data
           return {
             businesses: this.preRollbackData.map(b => ({

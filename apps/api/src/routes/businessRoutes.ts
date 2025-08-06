@@ -1,19 +1,19 @@
 import { Router } from 'express';
 import { BusinessService } from '../services/businessService.js';
 import { validateBody, validateQuery } from '../middleware/validation.js';
-import { authMiddleware, requireRole, requireBusinessOwner } from '../middleware/auth.js';
+import { authMiddleware, requireBusinessOwner, requireRole } from '../middleware/auth.js';
 import { performanceMonitoring } from '../middleware/performanceMonitoring.js';
 import { locationSecurityMiddleware } from '../middleware/locationSecurity.js';
 import {
-  createBusinessSchema,
-  updateBusinessSchema,
+  businessMediaUploadSchema,
   businessSearchSchema,
   categoryQuerySchema,
-  businessMediaUploadSchema
+  createBusinessSchema,
+  updateBusinessSchema
 } from '../schemas/businessSchemas.js';
-import { successResponse, errorResponse, paginatedResponse } from '../utils/responseUtils.js';
-import { handler as locationSearchHandler, getCategoriesInLocation, getPopularAreas } from '../functions/business/locationSearch.js';
-import { Request, Response, NextFunction } from 'express';
+import { errorResponse, paginatedResponse, successResponse } from '../utils/responseUtils.js';
+import { getCategoriesInLocation, getPopularAreas, handler as locationSearchHandler } from '../functions/business/locationSearch.js';
+import { NextFunction, Request, Response } from 'express';
 
 const router = Router();
 const businessService = new BusinessService();
@@ -56,7 +56,7 @@ router.get('/search/location',
       const event = {
         queryStringParameters: req.query as { [key: string]: string },
         headers: req.headers,
-        requestContext: { requestId: 'express-' + Date.now() },
+        requestContext: { requestId: `express-${  Date.now()}` },
       } as any;
 
       const result = await locationSearchHandler(event, {} as any, {} as any);
@@ -86,7 +86,7 @@ router.get('/search/location/categories',
       const event = {
         queryStringParameters: req.query as { [key: string]: string },
         headers: req.headers,
-        requestContext: { requestId: 'express-' + Date.now() },
+        requestContext: { requestId: `express-${  Date.now()}` },
       } as any;
 
       const result = await getCategoriesInLocation(event, {} as any, {} as any);
@@ -116,7 +116,7 @@ router.get('/search/location/popular-areas',
       const event = {
         queryStringParameters: req.query as { [key: string]: string },
         headers: req.headers,
-        requestContext: { requestId: 'express-' + Date.now() },
+        requestContext: { requestId: `express-${  Date.now()}` },
       } as any;
 
       const result = await getPopularAreas(event, {} as any, {} as any);

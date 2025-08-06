@@ -1,15 +1,15 @@
 import {
-  CognitoIdentityProviderClient,
   AdminCreateUserCommand,
-  AdminSetUserPasswordCommand,
+  AdminDeleteUserCommand,
+  AdminGetUserCommand,
   AdminInitiateAuthCommand,
   AdminRespondToAuthChallengeCommand,
-  AdminGetUserCommand,
+  AdminSetUserPasswordCommand,
   AdminUpdateUserAttributesCommand,
-  ForgotPasswordCommand,
-  ConfirmForgotPasswordCommand,
-  AdminDeleteUserCommand,
   AttributeType,
+  CognitoIdentityProviderClient,
+  ConfirmForgotPasswordCommand,
+  ForgotPasswordCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { config } from '../config/environment.js';
 import { CreateUserRequest, User } from '@buy-locals/shared';

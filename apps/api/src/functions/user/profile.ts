@@ -7,7 +7,7 @@ import { pool } from '../../config/database.js';
 import { config, validateEnvironment } from '../../config/environment.js';
 import { errorHandler } from '../../middleware/errorHandler.js';
 import { validateBody } from '../../middleware/validation.js';
-import { authenticateCognito, CognitoAuthenticatedRequest } from '../../middleware/cognitoAuth.js';
+import { CognitoAuthenticatedRequest, authenticateCognito } from '../../middleware/cognitoAuth.js';
 import { CognitoService } from '../../services/cognitoService.js';
 import { UpdateProfileRequest } from '@buy-locals/shared';
 import { updateProfileSchema } from '../../schemas/authSchemas.js';

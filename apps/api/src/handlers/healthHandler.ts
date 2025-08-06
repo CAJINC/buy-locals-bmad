@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { pool } from '../config/database.js';
-import { successResponse, errorResponse } from '../utils/responseUtils.js';
+import { errorResponse, successResponse } from '../utils/responseUtils.js';
 
 export const healthHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

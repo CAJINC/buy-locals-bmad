@@ -13,7 +13,7 @@
  * ✅ Monitoring & Alerting Integration
  */
 
-import { describe, test, expect } from '@jest/globals';
+import { describe, expect, test } from '@jest/globals';
 
 describe('Foundation Sprint Production Validation', () => {
   describe('1. ✅ PostGIS Spatial Database Migration Validation', () => {
@@ -106,13 +106,13 @@ describe('Foundation Sprint Production Validation', () => {
       const performanceTracker = {
         queries: [] as Array<{ type: string, executionTime: number, withinSLA: boolean }>,
         
-        recordQuery: function(type: string, executionTime: number) {
+        recordQuery(type: string, executionTime: number) {
           const withinSLA = executionTime < 200; // 200ms requirement
           this.queries.push({ type, executionTime, withinSLA });
           return { withinSLA, executionTime };
         },
         
-        getPerformanceStats: function() {
+        getPerformanceStats() {
           const totalQueries = this.queries.length;
           const withinSLA = this.queries.filter(q => q.withinSLA).length;
           const avgExecutionTime = this.queries.reduce((sum, q) => sum + q.executionTime, 0) / totalQueries;
@@ -145,7 +145,7 @@ describe('Foundation Sprint Production Validation', () => {
         maxConcurrency: 50,
         requestDuration: 150, // ms
         
-        simulateConcurrentRequests: function(count: number) {
+        simulateConcurrentRequests(count: number) {
           const requests = Array.from({ length: count }, (_, i) => ({
             id: i,
             startTime: Date.now() + (i * 10), // Staggered start
@@ -181,7 +181,7 @@ describe('Foundation Sprint Production Validation', () => {
           { name: '/api/businesses/search/location/popular-areas', avgResponseTime: 380, p95ResponseTime: 600 }
         ],
         
-        validatePerformance: function() {
+        validatePerformance() {
           return this.endpoints.map(endpoint => ({
             ...endpoint,
             meetsRequirement: endpoint.p95ResponseTime < 1000, // <1s requirement
@@ -210,7 +210,7 @@ describe('Foundation Sprint Production Validation', () => {
         hits: 0,
         misses: 0,
         
-        simulateRequest: function(cacheKey: string, isPopular: boolean = false) {
+        simulateRequest(cacheKey: string, isPopular: boolean = false) {
           // Popular locations have higher cache hit probability
           const hitProbability = isPopular ? 0.95 : 0.75;
           const isHit = Math.random() < hitProbability;
@@ -224,12 +224,12 @@ describe('Foundation Sprint Production Validation', () => {
           }
         },
         
-        getHitRate: function() {
+        getHitRate() {
           const total = this.hits + this.misses;
           return total > 0 ? this.hits / total : 0;
         },
         
-        reset: function() {
+        reset() {
           this.hits = 0;
           this.misses = 0;
         }
@@ -253,14 +253,14 @@ describe('Foundation Sprint Production Validation', () => {
     test('should validate cache performance characteristics', () => {
       // Test cache key generation and TTL management
       const cacheManager = {
-        generateKey: function(lat: number, lng: number, radius: number, filters: string[] = []) {
+        generateKey(lat: number, lng: number, radius: number, filters: string[] = []) {
           const latRounded = Math.round(lat * 10000);
           const lngRounded = Math.round(lng * 10000);
           const filtersHash = filters.sort().join(',');
           return `location:search:${latRounded}:${lngRounded}:${radius}:${filtersHash}`;
         },
         
-        calculateTTL: function(businessCount: number, isPopular: boolean) {
+        calculateTTL(businessCount: number, isPopular: boolean) {
           // Dynamic TTL based on area popularity and business density
           let baseTTL = 300; // 5 minutes
           
@@ -270,7 +270,7 @@ describe('Foundation Sprint Production Validation', () => {
           return Math.min(baseTTL, 3600); // Max 1 hour
         },
         
-        validateCacheOperations: function() {
+        validateCacheOperations() {
           const operations = [
             { type: 'write', size: 1024, time: 15 }, // 15ms write
             { type: 'read', size: 1024, time: 8 },   // 8ms read
@@ -311,14 +311,14 @@ describe('Foundation Sprint Production Validation', () => {
           { trigger: 'manual_refresh', affectedKeys: 15, invalidationTime: 120 }
         ],
         
-        validateInvalidation: function() {
+        validateInvalidation() {
           return this.scenarios.every(scenario => {
             // Invalidation should be fast and targeted
             return scenario.invalidationTime < 200 && scenario.affectedKeys < 20;
           });
         },
         
-        calculateInvalidationImpact: function() {
+        calculateInvalidationImpact() {
           const totalKeys = this.scenarios.reduce((sum, s) => sum + s.affectedKeys, 0);
           const maxTime = Math.max(...this.scenarios.map(s => s.invalidationTime));
           
@@ -341,7 +341,7 @@ describe('Foundation Sprint Production Validation', () => {
   describe('4. ✅ Security Middleware & Input Sanitization', () => {
     test('should validate comprehensive input sanitization', () => {
       const inputSanitizer = {
-        sanitizeCoordinates: function(lat: any, lng: any): { lat: number, lng: number } | null {
+        sanitizeCoordinates(lat: any, lng: any): { lat: number, lng: number } | null {
           // Type conversion and validation
           const numLat = parseFloat(lat);
           const numLng = parseFloat(lng);
@@ -353,7 +353,7 @@ describe('Foundation Sprint Production Validation', () => {
           return { lat: numLat, lng: numLng };
         },
         
-        sanitizeTextInput: function(input: string): string | null {
+        sanitizeTextInput(input: string): string | null {
           if (typeof input !== 'string') return null;
           
           // Remove dangerous characters and patterns
@@ -366,7 +366,7 @@ describe('Foundation Sprint Production Validation', () => {
           return input.trim().substring(0, 100);
         },
         
-        validateRadius: function(radius: any): number | null {
+        validateRadius(radius: any): number | null {
           const numRadius = parseFloat(radius);
           if (isNaN(numRadius) || numRadius < 0.1 || numRadius > 100) return null;
           return numRadius;
@@ -396,7 +396,7 @@ describe('Foundation Sprint Production Validation', () => {
       const rateLimiter = {
         windows: new Map<string, { count: number, resetTime: number }>(),
         
-        checkLimit: function(clientId: string, maxRequests: number = 100, windowMs: number = 60000) {
+        checkLimit(clientId: string, maxRequests: number = 100, windowMs: number = 60000) {
           const now = Date.now();
           const windowStart = Math.floor(now / windowMs) * windowMs;
           const key = `${clientId}:${windowStart}`;
@@ -413,7 +413,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        cleanup: function() {
+        cleanup() {
           const now = Date.now();
           for (const [key, window] of this.windows.entries()) {
             if (window.resetTime < now) {
@@ -448,7 +448,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should validate authentication integration', () => {
       const authValidator = {
-        validateApiKey: function(apiKey: string): boolean {
+        validateApiKey(apiKey: string): boolean {
           // Basic API key validation pattern
           if (!apiKey || typeof apiKey !== 'string') return false;
           if (apiKey.length < 32) return false;
@@ -458,7 +458,7 @@ describe('Foundation Sprint Production Validation', () => {
           return validFormat;
         },
         
-        validatePermissions: function(userId: string, resource: string, action: string): boolean {
+        validatePermissions(userId: string, resource: string, action: string): boolean {
           // Mock permission validation
           const permissions: Record<string, string[]> = {
             'user-123': ['read:businesses', 'read:locations'],
@@ -470,7 +470,7 @@ describe('Foundation Sprint Production Validation', () => {
           return userPerms.includes(`${action}:${resource}`) || userPerms.includes(`${action}:own:${resource}`);
         },
         
-        validateLocationAccess: function(userId: string, lat: number, lng: number): boolean {
+        validateLocationAccess(userId: string, lat: number, lng: number): boolean {
           // Mock geofencing/location access validation
           // Example: some users might have restricted geographic access
           const restrictedUser = userId === 'restricted-user';
@@ -501,7 +501,7 @@ describe('Foundation Sprint Production Validation', () => {
   describe('5. ✅ Production Readiness & Zero-Downtime Deployment', () => {
     test('should validate backward compatibility with existing systems', () => {
       const compatibilityValidator = {
-        validateSchemaCompatibility: function() {
+        validateSchemaCompatibility() {
           // Mock schema validation - ensure new columns don't break existing queries
           const existingQueries = [
             'SELECT id, name, location FROM businesses',
@@ -521,7 +521,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        validateApiCompatibility: function() {
+        validateApiCompatibility() {
           // Ensure existing API endpoints still work
           const existingEndpoints = [
             { path: '/api/businesses', method: 'GET', supported: true },
@@ -555,7 +555,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should validate rollback safety and procedures', () => {
       const rollbackValidator = {
-        validateMigrationRollback: function() {
+        validateMigrationRollback() {
           // Test that rollback scripts preserve data integrity
           const rollbackSteps = [
             { action: 'drop_triggers', preservesData: true, reversible: true },
@@ -575,7 +575,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        validateDeploymentStrategy: function() {
+        validateDeploymentStrategy() {
           // Blue-green deployment validation
           const deploymentScenarios = [
             { name: 'blue_green', downtime: 0, rollbackTime: 30 },
@@ -604,7 +604,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should validate monitoring and alerting integration', () => {
       const monitoringValidator = {
-        validateMetrics: function() {
+        validateMetrics() {
           const requiredMetrics = [
             { name: 'database_query_duration', threshold: 200, unit: 'ms' },
             { name: 'api_response_time', threshold: 1000, unit: 'ms' },
@@ -621,7 +621,7 @@ describe('Foundation Sprint Production Validation', () => {
           }));
         },
         
-        validateAlerts: function() {
+        validateAlerts() {
           const alertScenarios = [
             { condition: 'high_db_latency', triggerTime: 30, escalation: true },
             { condition: 'low_cache_hit_rate', triggerTime: 60, escalation: false },
@@ -637,7 +637,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        validateHealthChecks: function() {
+        validateHealthChecks() {
           const healthChecks = [
             { service: 'database', endpoint: '/health/db', timeout: 5000 },
             { service: 'redis', endpoint: '/health/redis', timeout: 3000 },
@@ -670,7 +670,7 @@ describe('Foundation Sprint Production Validation', () => {
   describe('6. ✅ Cross-Platform Mobile Integration Validation', () => {
     test('should validate location service compatibility across platforms', () => {
       const locationServiceValidator = {
-        validatePermissionHandling: function() {
+        validatePermissionHandling() {
           const permissionScenarios = [
             { platform: 'iOS', status: 'granted', canRequest: true, expected: 'allow' },
             { platform: 'iOS', status: 'denied', canRequest: true, expected: 'request' },
@@ -695,7 +695,7 @@ describe('Foundation Sprint Production Validation', () => {
           });
         },
         
-        validateLocationAccuracy: function() {
+        validateLocationAccuracy() {
           const accuracyLevels = [
             { level: 'high', accuracy: 5, timeout: 15000, expected: 'excellent' },
             { level: 'medium', accuracy: 25, timeout: 10000, expected: 'good' },
@@ -718,7 +718,7 @@ describe('Foundation Sprint Production Validation', () => {
           }));
         },
         
-        validateFallbackStrategies: function() {
+        validateFallbackStrategies() {
           const fallbackChain = [
             { strategy: 'high_accuracy_gps', success: false, fallback: 'network_location' },
             { strategy: 'network_location', success: false, fallback: 'passive_location' },
@@ -756,7 +756,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should validate coordinate format handling', () => {
       const coordinateValidator = {
-        validateFormats: function() {
+        validateFormats() {
           const testCases = [
             // Standard decimal degrees
             { input: { lat: 40.7128, lng: -74.0060 }, expected: true, format: 'decimal' },
@@ -823,7 +823,7 @@ describe('Foundation Sprint Production Validation', () => {
   describe('7. ✅ Integration with Stories 1.2, 1.3, 1.4, 2.1', () => {
     test('should maintain authentication system compatibility (Story 1.2)', () => {
       const authIntegration = {
-        validateUserContext: function(userId: string, businessId: string) {
+        validateUserContext(userId: string, businessId: string) {
           // Mock user-business relationship validation
           const relationships = {
             'user-123': { role: 'customer', businesses: [] },
@@ -841,7 +841,7 @@ describe('Foundation Sprint Production Validation', () => {
           return { valid: false, reason: 'insufficient_permissions' };
         },
         
-        validateLocationPermissions: function(userId: string) {
+        validateLocationPermissions(userId: string) {
           // Mock location access validation
           const userPermissions = {
             'user-123': { location_access: true, precision: 'city' },
@@ -865,7 +865,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should preserve core database schema integrity (Story 1.3)', () => {
       const schemaIntegration = {
-        validateCoreEntities: function() {
+        validateCoreEntities() {
           // Mock validation of core tables and relationships
           const coreEntities = [
             { table: 'users', required: true, hasData: true },
@@ -885,7 +885,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        validateForeignKeys: function() {
+        validateForeignKeys() {
           const foreignKeys = [
             { from: 'businesses', to: 'users', column: 'owner_id', valid: true },
             { from: 'business_users', to: 'businesses', column: 'business_id', valid: true },
@@ -910,7 +910,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should enhance business listing functionality (Story 1.4)', () => {
       const listingEnhancement = {
-        validateEnhancedFeatures: function() {
+        validateEnhancedFeatures() {
           const originalFeatures = ['name', 'description', 'category', 'contact'];
           const newFeatures = ['location_search', 'distance_filter', 'geo_clustering'];
           
@@ -922,7 +922,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        validateSearchCapabilities: function() {
+        validateSearchCapabilities() {
           const searchTypes = [
             { type: 'text', supported: true, performance: 'good' },
             { type: 'category', supported: true, performance: 'excellent' },
@@ -949,7 +949,7 @@ describe('Foundation Sprint Production Validation', () => {
 
     test('should integrate with enhanced business profiles (Story 2.1)', () => {
       const profileIntegration = {
-        validateLocationIntegration: function() {
+        validateLocationIntegration() {
           // Mock business profile with location features
           const enhancedProfile = {
             basic: { id: 'bus-123', name: 'Test Business', category: 'restaurant' },
@@ -966,7 +966,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        validateMediaIntegration: function() {
+        validateMediaIntegration() {
           // Mock media handling with location context
           const mediaFeatures = [
             { type: 'logo', geotagged: false, required: true },
@@ -1009,7 +1009,7 @@ describe('Foundation Sprint Production Validation', () => {
           { name: 'Documentation', weight: 0.05, score: 0.70 }      // 70% - Code documentation
         ],
         
-        calculateScore: function() {
+        calculateScore() {
           const weightedScore = this.categories.reduce((total, category) => {
             return total + (category.score * category.weight);
           }, 0);
@@ -1032,7 +1032,7 @@ describe('Foundation Sprint Production Validation', () => {
           };
         },
         
-        getGrade: function(score: number) {
+        getGrade(score: number) {
           if (score >= 0.95) return 'A+';
           if (score >= 0.90) return 'A';
           if (score >= 0.85) return 'B+';
@@ -1041,7 +1041,7 @@ describe('Foundation Sprint Production Validation', () => {
           return 'C';
         },
         
-        getRecommendations: function(categoryScores: any[]) {
+        getRecommendations(categoryScores: any[]) {
           return categoryScores
             .filter(cat => cat.score < 0.85)
             .map(cat => `Improve ${cat.name}: ${cat.score * 100}% (target: 85%+)`)

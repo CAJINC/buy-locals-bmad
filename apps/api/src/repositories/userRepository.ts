@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository.js';
-import { User, CreateUserRequest, UserProfile } from '../types/User.js';
+import { CreateUserRequest, User, UserProfile } from '../types/User.js';
 import bcrypt from 'bcryptjs';
 
 export class UserRepository extends BaseRepository<User> {
@@ -155,8 +155,8 @@ export class UserRepository extends BaseRepository<User> {
     
     let whereClause = '';
     let countWhereClause = '';
-    let params = [limit, offset];
-    let countParams: any[] = [];
+    const params = [limit, offset];
+    const countParams: any[] = [];
 
     if (role) {
       whereClause = 'WHERE role = $3';
