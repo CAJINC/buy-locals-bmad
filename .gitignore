@@ -1,0 +1,221 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Logs
+logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+
+# React Native
+# Metro Bundler cache
+.metro
+
+# Expo
+.expo/
+expo-env.d.ts
+
+# React Native Flipper
+ios/Flipper
+
+# iOS
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+ios/*.xcuserstate
+ios/UserInterfaceState.xcuserstate
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/captures/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+
+# React Native Codegen
+react-native-codegen-*
+
+# AWS CDK
+cdk.out/
+*.js.map
+
+# Build outputs
+build/
+dist/
+out/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# IDE
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.json
+.idea/
+
+# Testing
+test-results/
+coverage/
+*.spec.js.snap
+*.test.js.snap
+
+# Serverless
+.serverless/
+serverless-output.json
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Local development
+.local
+
+# TypeScript
+*.js
+*.d.ts
+!jest.config.js
+!metro.config.js
+!babel.config.js
+!tailwind.config.js
+!postcss.config.js
+!vite.config.ts
+
+# Keep configuration files
+!*config*
+!.*rc*
+!package*.json
+!tsconfig*.json
+
+# Security and credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.keystore
+credentials.json
+service-account*.json
+
+# Backups
+*.backup
+*.bak
+*.tmp
+
+# System files
+.fseventsd
+.Trashes
+.TemporaryItems
+.Spotlight-V100
+.VolumeIcon.icns
+
+# Application specific
+uploads/
+public/uploads/
+static/uploads/
