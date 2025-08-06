@@ -1,4 +1,5 @@
 import { RedisClientType, createClient } from 'redis';
+import { logger } from '../utils/logger';
 
 // Enhanced Redis configuration for location-based caching
 const redisConfig = {
@@ -8,7 +9,10 @@ const redisConfig = {
     lazyConnect: true,
     reconnectStrategy: (retries: number) => {
       if (retries > 10) {
-        console.error('Redis connection failed after 10 retries');
+        logger.error('Redis connection failed after 10 retries', {
+          component: 'redis-reconnect',
+          retries,
+        });
         return new Error('Redis connection failed');
       }
       // Exponential backoff: 50ms * 2^retries, max 5s
@@ -21,28 +25,41 @@ const redisConfig = {
 const client: RedisClientType = createClient(redisConfig);
 
 // Enhanced error handling and monitoring
-client.on('error', (err) => {
-  console.error('Redis Client Error:', {
-    error: err.message,
-    timestamp: new Date().toISOString(),
+client.on('error', err => {
+  logger.redis('Redis Client Error', {
+    component: 'redis-client',
+    event: 'error',
+    errorMessage: err.message,
     code: err.code,
   });
 });
 
 client.on('connect', () => {
-  console.log('Redis client connected');
+  logger.redis('Redis client connected', {
+    component: 'redis-client',
+    event: 'connect',
+  });
 });
 
 client.on('ready', () => {
-  console.log('Redis client ready for commands');
+  logger.redis('Redis client ready for commands', {
+    component: 'redis-client',
+    event: 'ready',
+  });
 });
 
 client.on('reconnecting', () => {
-  console.log('Redis client reconnecting...');
+  logger.redis('Redis client reconnecting', {
+    component: 'redis-client',
+    event: 'reconnecting',
+  });
 });
 
 client.on('end', () => {
-  console.log('Redis client connection ended');
+  logger.redis('Redis client connection ended', {
+    component: 'redis-client',
+    event: 'end',
+  });
 });
 
 // Connection management
@@ -56,9 +73,16 @@ export const connectRedis = async (): Promise<void> => {
   isConnecting = true;
   try {
     await client.connect();
-    console.log('Redis connected successfully');
+    logger.redis('Redis connected successfully', {
+      component: 'redis-connection',
+      success: true,
+    });
   } catch (error) {
-    console.error('Failed to connect to Redis:', error);
+    logger.error('Failed to connect to Redis', {
+      component: 'redis-connection',
+      success: false,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   } finally {
     isConnecting = false;
@@ -69,7 +93,10 @@ export const connectRedis = async (): Promise<void> => {
 export const disconnectRedis = async (): Promise<void> => {
   if (client.isOpen) {
     await client.disconnect();
-    console.log('Redis disconnected');
+    logger.redis('Redis disconnected', {
+      component: 'redis-connection',
+      event: 'disconnect',
+    });
   }
 };
 
@@ -86,34 +113,49 @@ export const isRedisHealthy = async (): Promise<boolean> => {
 
 // Cache key utilities for location-based caching
 export const cacheKeys = {
-  locationSearch: (lat: number, lng: number, radius: number, filters: string = '') => 
+  locationSearch: (lat: number, lng: number, radius: number, filters: string = '') =>
     `location:search:${Math.round(lat * 10000)}:${Math.round(lng * 10000)}:${radius}:${filters}`,
-  
-  businessLocation: (businessId: string) => 
-    `business:location:${businessId}`,
-  
-  geographicCluster: (lat: number, lng: number) => 
+
+  businessLocation: (businessId: string) => `business:location:${businessId}`,
+
+  geographicCluster: (lat: number, lng: number) =>
     `geo:cluster:${Math.round(lat * 100)}:${Math.round(lng * 100)}`,
-  
-  categoriesInLocation: (lat: number, lng: number, radius: number) => 
+
+  categoriesInLocation: (lat: number, lng: number, radius: number) =>
     `categories:location:${Math.round(lat * 100)}:${Math.round(lng * 100)}:${radius}`,
-  
-  popularAreas: (lat: number, lng: number, radius: number) => 
+
+  popularAreas: (lat: number, lng: number, radius: number) =>
     `popular:areas:${Math.round(lat * 100)}:${Math.round(lng * 100)}:${radius}`,
 };
 
 // Performance monitoring
 export const redisMetrics = {
   trackCacheHit: (key: string) => {
-    console.debug('Redis cache HIT:', { key, timestamp: Date.now() });
+    logger.debug('Redis cache HIT', {
+      component: 'redis-cache',
+      event: 'hit',
+      key,
+      timestamp: Date.now(),
+    });
   },
-  
+
   trackCacheMiss: (key: string) => {
-    console.debug('Redis cache MISS:', { key, timestamp: Date.now() });
+    logger.debug('Redis cache MISS', {
+      component: 'redis-cache',
+      event: 'miss',
+      key,
+      timestamp: Date.now(),
+    });
   },
-  
+
   trackCacheWrite: (key: string, ttl: number) => {
-    console.debug('Redis cache WRITE:', { key, ttl, timestamp: Date.now() });
+    logger.debug('Redis cache WRITE', {
+      component: 'redis-cache',
+      event: 'write',
+      key,
+      ttl,
+      timestamp: Date.now(),
+    });
   },
 };
 

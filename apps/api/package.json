@@ -22,6 +22,7 @@
     "@aws-sdk/client-ses": "^3.461.0",
     "@aws-sdk/s3-request-presigner": "^3.859.0",
     "@types/aws-lambda": "^8.10.152",
+    "@types/winston": "^2.4.4",
     "aws-jwt-verify": "^4.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -36,7 +37,8 @@
     "sharp": "^0.33.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

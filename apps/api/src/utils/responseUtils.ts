@@ -1,12 +1,13 @@
 import { Response } from 'express';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
   statusCode: number;
   timestamp: string;
+  details?: string[];
 }
 
 export const successResponse = <T>(

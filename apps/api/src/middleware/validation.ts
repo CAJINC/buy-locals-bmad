@@ -5,7 +5,7 @@ import { ApiError } from './errorHandler.js';
 export const validateBody = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { error } = schema.validate(req.body);
-    
+
     if (error) {
       const validationError: ApiError = new Error('Validation failed') as ApiError;
       validationError.statusCode = 400;
@@ -13,7 +13,7 @@ export const validateBody = (schema: Joi.ObjectSchema) => {
       validationError.details = error.details.map(detail => detail.message);
       return next(validationError);
     }
-    
+
     next();
   };
 };
@@ -21,7 +21,7 @@ export const validateBody = (schema: Joi.ObjectSchema) => {
 export const validateQuery = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { error } = schema.validate(req.query);
-    
+
     if (error) {
       const validationError: ApiError = new Error('Validation failed') as ApiError;
       validationError.statusCode = 400;
@@ -29,7 +29,7 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
       validationError.details = error.details.map(detail => detail.message);
       return next(validationError);
     }
-    
+
     next();
   };
 };
@@ -37,7 +37,7 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
 export const validateParams = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { error } = schema.validate(req.params);
-    
+
     if (error) {
       const validationError: ApiError = new Error('Validation failed') as ApiError;
       validationError.statusCode = 400;
@@ -45,21 +45,25 @@ export const validateParams = (schema: Joi.ObjectSchema) => {
       validationError.details = error.details.map(detail => detail.message);
       return next(validationError);
     }
-    
+
     next();
   };
 };
 
-
-export const validationErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+export const validationErrorHandler = (
+  err: { isJoi?: boolean; details?: { message: string }[] },
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Handle Joi validation errors specifically
   if (err.isJoi) {
     const validationError: ApiError = new Error('Validation failed') as ApiError;
     validationError.statusCode = 400;
     validationError.isOperational = true;
-    validationError.details = err.details.map((detail: any) => detail.message);
+    validationError.details = err.details?.map((detail: { message: string }) => detail.message);
     return next(validationError);
   }
-  
+
   next(err);
 };

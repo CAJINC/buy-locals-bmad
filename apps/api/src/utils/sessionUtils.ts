@@ -1,13 +1,17 @@
 import { createClient } from 'redis';
 import { config } from '../config/environment.js';
+import { logger } from './logger';
 
 // Redis client for session management
 const redisClient = createClient({
   url: config.redisUrl,
 });
 
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
+redisClient.on('error', err => {
+  logger.error('Redis Client Error in session utils', {
+    component: 'session-manager',
+    errorMessage: err.message,
+  });
 });
 
 // Initialize Redis connection
@@ -30,13 +34,20 @@ export class SessionManager {
     try {
       await initializeRedis();
       const key = `${this.TOKEN_BLACKLIST_PREFIX}${tokenId}`;
-      const ttl = expirationTime ? Math.floor(expirationTime - Date.now() / 1000) : this.DEFAULT_TTL;
-      
+      const ttl = expirationTime
+        ? Math.floor(expirationTime - Date.now() / 1000)
+        : this.DEFAULT_TTL;
+
       if (ttl > 0) {
         await redisClient.setEx(key, ttl, 'blacklisted');
       }
     } catch (error) {
-      console.error('Error blacklisting token:', error);
+      logger.error('Error blacklisting token', {
+        component: 'session-manager',
+        action: 'blacklist-token',
+        tokenId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to blacklist token');
     }
   }
@@ -51,7 +62,12 @@ export class SessionManager {
       const result = await redisClient.get(key);
       return result !== null;
     } catch (error) {
-      console.error('Error checking token blacklist:', error);
+      logger.error('Error checking token blacklist', {
+        component: 'session-manager',
+        action: 'check-blacklist',
+        tokenId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       return false; // Fail open - don't block valid tokens due to Redis issues
     }
   }
@@ -59,12 +75,15 @@ export class SessionManager {
   /**
    * Store user session data
    */
-  static async storeUserSession(userId: string, sessionData: {
-    deviceInfo?: string;
-    ipAddress?: string;
-    lastActivity: Date;
-    loginTime: Date;
-  }): Promise<void> {
+  static async storeUserSession(
+    userId: string,
+    sessionData: {
+      deviceInfo?: string;
+      ipAddress?: string;
+      lastActivity: Date;
+      loginTime: Date;
+    }
+  ): Promise<void> {
     try {
       await initializeRedis();
       const key = `${this.USER_SESSION_PREFIX}${userId}`;
@@ -73,10 +92,15 @@ export class SessionManager {
         lastActivity: sessionData.lastActivity.toISOString(),
         loginTime: sessionData.loginTime.toISOString(),
       };
-      
+
       await redisClient.setEx(key, this.DEFAULT_TTL, JSON.stringify(data));
     } catch (error) {
-      console.error('Error storing user session:', error);
+      logger.error('Error storing user session', {
+        component: 'session-manager',
+        action: 'store-session',
+        userId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       // Don't throw - session storage failure shouldn't block authentication
     }
   }
@@ -94,9 +118,9 @@ export class SessionManager {
       await initializeRedis();
       const key = `${this.USER_SESSION_PREFIX}${userId}`;
       const data = await redisClient.get(key);
-      
+
       if (!data) return null;
-      
+
       const sessionData = JSON.parse(data);
       return {
         ...sessionData,
@@ -104,7 +128,12 @@ export class SessionManager {
         loginTime: new Date(sessionData.loginTime),
       };
     } catch (error) {
-      console.error('Error getting user session:', error);
+      logger.error('Error getting user session', {
+        component: 'session-manager',
+        action: 'get-session',
+        userId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
   }
@@ -117,14 +146,19 @@ export class SessionManager {
       await initializeRedis();
       const key = `${this.USER_SESSION_PREFIX}${userId}`;
       const existingData = await redisClient.get(key);
-      
+
       if (existingData) {
         const sessionData = JSON.parse(existingData);
         sessionData.lastActivity = new Date().toISOString();
         await redisClient.setEx(key, this.DEFAULT_TTL, JSON.stringify(sessionData));
       }
     } catch (error) {
-      console.error('Error updating last activity:', error);
+      logger.error('Error updating last activity', {
+        component: 'session-manager',
+        action: 'update-activity',
+        userId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       // Don't throw - activity update failure shouldn't block requests
     }
   }
@@ -138,7 +172,12 @@ export class SessionManager {
       const key = `${this.USER_SESSION_PREFIX}${userId}`;
       await redisClient.del(key);
     } catch (error) {
-      console.error('Error clearing user session:', error);
+      logger.error('Error clearing user session', {
+        component: 'session-manager',
+        action: 'clear-session',
+        userId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to clear user session');
     }
   }
@@ -150,9 +189,16 @@ export class SessionManager {
     try {
       await initializeRedis();
       // Redis handles TTL expiration automatically, so this is mainly for logging
-      console.log('Session cleanup completed');
+      logger.info('Session cleanup completed', {
+        component: 'session-manager',
+        action: 'cleanup',
+      });
     } catch (error) {
-      console.error('Error during session cleanup:', error);
+      logger.error('Error during session cleanup', {
+        component: 'session-manager',
+        action: 'cleanup',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

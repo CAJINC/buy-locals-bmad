@@ -1,5 +1,6 @@
 import { BaseRepository } from './BaseRepository.js';
 import { Business, BusinessSearchQuery, CreateBusinessRequest } from '../types/Business.js';
+import { logger } from '../utils/logger';
 
 export class BusinessRepository extends BaseRepository<Business> {
   constructor() {
@@ -50,7 +51,7 @@ export class BusinessRepository extends BaseRepository<Business> {
     businesses: Business[];
     totalCount: number;
   }> {
-    const { lat, lng, radius = 25, category, search, page = 1, limit = 10 } = searchQuery;
+    const { lat, lng, category, search, page = 1, limit = 10 } = searchQuery;
     const offset = (page - 1) * limit;
 
     // Use PostGIS if coordinates are provided, otherwise fall back to JSONB
@@ -134,15 +135,7 @@ export class BusinessRepository extends BaseRepository<Business> {
       `;
 
       const categoryArray = category ? [category] : null;
-      const searchParams = [
-        lat,
-        lng,
-        radius,
-        categoryArray,
-        search || null,
-        limit,
-        offset,
-      ];
+      const searchParams = [lat, lng, radius, categoryArray, search || null, limit, offset];
 
       const countParams = searchParams.slice(0, 5); // Remove limit and offset
 
@@ -157,15 +150,22 @@ export class BusinessRepository extends BaseRepository<Business> {
 
       // Log performance metrics for monitoring
       this.logQueryPerformance('searchBusinessesPostGIS', executionTimeMs, {
-        lat, lng, radius, category, search, resultsCount: businessResult.rows.length
+        lat,
+        lng,
+        radius,
+        category,
+        search,
+        resultsCount: businessResult.rows.length,
       });
 
       // Alert if performance degrades
       if (executionTimeMs > 200) {
-        console.warn('PostGIS query performance warning:', {
-          executionTimeMs,
+        logger.performance('PostGIS query performance warning', {
+          component: 'business-repository',
+          operation: 'postgis-query',
+          duration: executionTimeMs,
           query: searchQuery,
-          resultCount: businessResult.rows.length
+          resultCount: businessResult.rows.length,
         });
       }
 
@@ -180,13 +180,15 @@ export class BusinessRepository extends BaseRepository<Business> {
     } catch (error) {
       const endTime = process.hrtime.bigint();
       const executionTimeMs = Number(endTime - startTime) / 1000000;
-      
-      console.error('PostGIS query error:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+
+      logger.error('PostGIS query error', {
+        component: 'business-repository',
+        operation: 'postgis-query',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
         executionTimeMs,
-        query: searchQuery
+        query: searchQuery,
       });
-      
+
       throw error;
     }
   }
@@ -196,13 +198,11 @@ export class BusinessRepository extends BaseRepository<Business> {
    */
   async getBusinessesInArea(polygon: { lat: number; lng: number }[]): Promise<Business[]> {
     const startTime = process.hrtime.bigint();
-    
+
     try {
       // Convert polygon coordinates to PostGIS format
-      const polygonString = polygon
-        .map(point => `${point.lng} ${point.lat}`)
-        .join(', ');
-      
+      const polygonString = polygon.map(point => `${point.lng} ${point.lat}`).join(', ');
+
       const query = `
         SELECT *, 
                ST_X(location_point) as longitude,
@@ -218,18 +218,22 @@ export class BusinessRepository extends BaseRepository<Business> {
       `;
 
       const result = await this.query(query, []);
-      
+
       const endTime = process.hrtime.bigint();
       const executionTimeMs = Number(endTime - startTime) / 1000000;
-      
+
       this.logQueryPerformance('getBusinessesInArea', executionTimeMs, {
         polygonPoints: polygon.length,
-        resultsCount: result.rows.length
+        resultsCount: result.rows.length,
       });
 
       return result.rows;
     } catch (error) {
-      console.error('Get businesses in area error:', error);
+      logger.error('Get businesses in area error', {
+        component: 'business-repository',
+        operation: 'get-businesses-in-area',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -238,8 +242,8 @@ export class BusinessRepository extends BaseRepository<Business> {
    * Get business density analysis for an area
    */
   async getBusinessDensityAnalysis(
-    centerLat: number, 
-    centerLng: number, 
+    centerLat: number,
+    centerLng: number,
     radiusKm: number
   ): Promise<{
     totalBusinesses: number;
@@ -248,7 +252,7 @@ export class BusinessRepository extends BaseRepository<Business> {
     averageDistance: number;
   }> {
     const startTime = process.hrtime.bigint();
-    
+
     try {
       const query = `
         WITH area_businesses AS (
@@ -282,26 +286,33 @@ export class BusinessRepository extends BaseRepository<Business> {
 
       const result = await this.query(query, [centerLat, centerLng, radiusKm]);
       const row = result.rows[0];
-      
+
       const totalBusinesses = parseInt(row.total_businesses) || 0;
       const areaKm2 = Math.PI * radiusKm * radiusKm;
       const densityPerKm2 = totalBusinesses / areaKm2;
 
       const endTime = process.hrtime.bigint();
       const executionTimeMs = Number(endTime - startTime) / 1000000;
-      
+
       this.logQueryPerformance('getBusinessDensityAnalysis', executionTimeMs, {
-        centerLat, centerLng, radiusKm, totalBusinesses
+        centerLat,
+        centerLng,
+        radiusKm,
+        totalBusinesses,
       });
 
       return {
         totalBusinesses,
         densityPerKm2: Math.round(densityPerKm2 * 100) / 100,
         categoryBreakdown: row.category_breakdown || [],
-        averageDistance: parseFloat(row.avg_distance) || 0
+        averageDistance: parseFloat(row.avg_distance) || 0,
       };
     } catch (error) {
-      console.error('Business density analysis error:', error);
+      logger.error('Business density analysis error', {
+        component: 'business-repository',
+        operation: 'density-analysis',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -310,17 +321,17 @@ export class BusinessRepository extends BaseRepository<Business> {
    * Find nearest businesses to a point
    */
   async findNearestBusinesses(
-    lat: number, 
-    lng: number, 
+    lat: number,
+    lng: number,
     limit: number = 5,
     category?: string
   ): Promise<(Business & { distance: number })[]> {
     const startTime = process.hrtime.bigint();
-    
+
     try {
       let categoryFilter = '';
       const params: any[] = [lat, lng, limit];
-      
+
       if (category) {
         categoryFilter = 'AND $4 = ANY(categories)';
         params.push(category);
@@ -341,20 +352,28 @@ export class BusinessRepository extends BaseRepository<Business> {
       `;
 
       const result = await this.query(query, params);
-      
+
       const endTime = process.hrtime.bigint();
       const executionTimeMs = Number(endTime - startTime) / 1000000;
-      
+
       this.logQueryPerformance('findNearestBusinesses', executionTimeMs, {
-        lat, lng, limit, category, resultsCount: result.rows.length
+        lat,
+        lng,
+        limit,
+        category,
+        resultsCount: result.rows.length,
       });
 
       return result.rows.map(row => ({
         ...row,
-        distance: parseFloat(row.distance_km)
+        distance: parseFloat(row.distance_km),
       }));
     } catch (error) {
-      console.error('Find nearest businesses error:', error);
+      logger.error('Find nearest businesses error', {
+        component: 'business-repository',
+        operation: 'find-nearest',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -368,14 +387,24 @@ export class BusinessRepository extends BaseRepository<Business> {
       queryType,
       executionTimeMs: Math.round(executionTimeMs * 100) / 100,
       metadata,
-      performanceLevel: executionTimeMs < 50 ? 'excellent' : 
-                       executionTimeMs < 200 ? 'good' : 
-                       executionTimeMs < 500 ? 'acceptable' : 'poor'
+      performanceLevel:
+        executionTimeMs < 50
+          ? 'excellent'
+          : executionTimeMs < 200
+            ? 'good'
+            : executionTimeMs < 500
+              ? 'acceptable'
+              : 'poor',
     };
 
-    // In production, this would go to a proper logging service
-    console.log('Query Performance:', JSON.stringify(logEntry));
-    
+    logger.performance('Query Performance', {
+      component: 'business-repository',
+      operation: logEntry.operation,
+      duration: logEntry.executionTimeMs,
+      query: logEntry.query,
+      timestamp: logEntry.timestamp,
+    });
+
     // Could also send to metrics service like DataDog, New Relic, etc.
     // metricsService.recordQueryPerformance(logEntry);
   }

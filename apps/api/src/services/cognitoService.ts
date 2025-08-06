@@ -12,6 +12,7 @@ import {
 import crypto from 'crypto';
 import { config } from '../config/environment';
 import { CreateUserRequest, User } from '@buy-locals/shared';
+import { logger } from '../utils/logger';
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: config.awsRegion,
@@ -65,7 +66,12 @@ export class CognitoService {
         tempPassword,
       };
     } catch (error) {
-      console.error('Error registering user:', error);
+      logger.auth('Error registering user', {
+        component: 'cognito-service',
+        action: 'register-user',
+        email: userData.email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to register user');
     }
   }
@@ -105,7 +111,12 @@ export class CognitoService {
         throw new Error('Authentication failed');
       }
     } catch (error) {
-      console.error('Error logging in user:', error);
+      logger.auth('Error logging in user', {
+        component: 'cognito-service',
+        action: 'login-user',
+        email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Invalid credentials');
     }
   }
@@ -138,7 +149,11 @@ export class CognitoService {
         throw new Error('Token refresh failed');
       }
     } catch (error) {
-      console.error('Error refreshing token:', error);
+      logger.auth('Error refreshing token', {
+        component: 'cognito-service',
+        action: 'refresh-token',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to refresh token');
     }
   }
@@ -172,7 +187,12 @@ export class CognitoService {
         updatedAt: result.UserLastModifiedDate || new Date(),
       };
     } catch (error) {
-      console.error('Error getting user:', error);
+      logger.auth('Error getting user', {
+        component: 'cognito-service',
+        action: 'get-user',
+        email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('User not found');
     }
   }
@@ -211,7 +231,12 @@ export class CognitoService {
         await cognitoClient.send(updateCommand);
       }
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      logger.auth('Error updating user profile', {
+        component: 'cognito-service',
+        action: 'update-profile',
+        email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to update profile');
     }
   }
@@ -229,7 +254,12 @@ export class CognitoService {
 
       await cognitoClient.send(forgotPasswordCommand);
     } catch (error) {
-      console.error('Error initiating password reset:', error);
+      logger.auth('Error initiating password reset', {
+        component: 'cognito-service',
+        action: 'forgot-password',
+        email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to initiate password reset');
     }
   }
@@ -253,7 +283,12 @@ export class CognitoService {
 
       await cognitoClient.send(confirmCommand);
     } catch (error) {
-      console.error('Error confirming password reset:', error);
+      logger.auth('Error confirming password reset', {
+        component: 'cognito-service',
+        action: 'confirm-password-reset',
+        email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw new Error('Failed to reset password');
     }
   }

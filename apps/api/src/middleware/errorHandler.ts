@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { logger } from '../utils/logger';
 
 export interface ApiError extends Error {
   statusCode?: number;
@@ -21,12 +22,11 @@ export const errorHandler = (err: ApiError, req: Request, res: Response, _next: 
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   };
 
-  // Log to structured logger in production, console in dev
-  if (process.env.NODE_ENV === 'production') {
-    // In production, you'd use a proper logger like Winston/Pino
-    console.log(JSON.stringify(errorLog));
+  // Log using structured logger
+  if (err.statusCode && err.statusCode >= 500) {
+    logger.error('API Server Error', errorLog);
   } else {
-    console.error('API Error:', errorLog);
+    logger.warn('API Client Error', errorLog);
   }
 
   const statusCode = err.statusCode || 500;
@@ -34,7 +34,13 @@ export const errorHandler = (err: ApiError, req: Request, res: Response, _next: 
   // Sanitize error messages - don't expose internal errors to client
   const message = err.statusCode && err.isOperational ? err.message : 'Internal server error';
 
-  const errorResponse: any = {
+  const errorResponse: {
+    error: string;
+    statusCode: number;
+    timestamp: string;
+    stack?: string;
+    details?: string[];
+  } = {
     error: message,
     statusCode,
     timestamp: new Date().toISOString(),

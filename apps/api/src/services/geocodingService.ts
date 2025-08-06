@@ -1,4 +1,5 @@
 import { config } from '../config/environment.js';
+import { logger } from '../utils/logger';
 
 export interface GeocodingResult {
   address: string;
@@ -29,23 +30,28 @@ export class GeocodingService {
   /**
    * Validate and geocode an address using Google Maps Geocoding API
    */
-  async geocodeAddress(address: string, city: string, state: string, zipCode: string): Promise<GeocodingResult> {
+  async geocodeAddress(
+    address: string,
+    city: string,
+    state: string,
+    zipCode: string
+  ): Promise<GeocodingResult> {
     const fullAddress = `${address}, ${city}, ${state} ${zipCode}`;
-    
+
     // Check cache first
     const cacheKey = `geocode:${fullAddress.toLowerCase()}`;
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheTtl) {
       return cached.result;
     }
-    
+
     try {
       const url = new URL(this.baseUrl);
       url.searchParams.append('address', fullAddress);
       url.searchParams.append('key', this.apiKey);
 
       const response = await fetch(url.toString());
-      
+
       if (!response.ok) {
         throw new Error(`Geocoding API request failed: ${response.status}`);
       }
@@ -58,7 +64,7 @@ export class GeocodingService {
 
       const result = data.results[0];
       const location = result.geometry.location;
-      
+
       // Extract address components
       const addressComponents = result.address_components;
       const extractedAddress = this.extractAddressComponents(addressComponents);
@@ -79,16 +85,20 @@ export class GeocodingService {
       // Cache the successful result
       this.cache.set(cacheKey, {
         result: geocodingResult,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       return geocodingResult;
     } catch (error) {
-      console.error('Geocoding API error:', {
+      logger.error('Geocoding API error', {
+        component: 'geocoding-service',
+        action: 'geocode-address',
         address: fullAddress,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-      throw new Error(`Geocoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Geocoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -102,7 +112,7 @@ export class GeocodingService {
       url.searchParams.append('key', this.apiKey);
 
       const response = await fetch(url.toString());
-      
+
       if (!response.ok) {
         throw new Error(`Reverse geocoding API request failed: ${response.status}`);
       }
@@ -130,11 +140,15 @@ export class GeocodingService {
         formattedAddress: result.formatted_address,
       };
     } catch (error) {
-      console.error('Reverse geocoding API error:', {
+      logger.error('Reverse geocoding API error', {
+        component: 'geocoding-service',
+        action: 'reverse-geocode',
         coordinates: { lat, lng },
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-      throw new Error(`Reverse geocoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Reverse geocoding failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -148,18 +162,20 @@ export class GeocodingService {
   /**
    * Extract structured address information from Google Maps address components
    */
-  private extractAddressComponents(components: any[]): {
+  private extractAddressComponents(
+    components: { long_name: string; short_name: string; types: string[] }[]
+  ): {
     address?: string;
     city?: string;
     state?: string;
     zipCode?: string;
     country?: string;
   } {
-    const extracted: any = {};
+    const extracted: Record<string, unknown> = {};
 
     for (const component of components) {
       const types = component.types;
-      
+
       if (types.includes('street_number')) {
         extracted.streetNumber = component.long_name;
       } else if (types.includes('route')) {

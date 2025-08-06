@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../utils/logger';
 
 // Extend Express Request interface to include correlationId
 declare module 'express-serve-static-core' {
@@ -17,47 +18,21 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   // Add correlation ID to response headers
   res.setHeader('X-Correlation-ID', req.correlationId);
 
-  // Log request details
-  const requestLog = {
-    level: 'info',
-    type: 'request',
+  // Request logging handled by logger.request below
+
+  logger.request(req.method, req.url, {
     correlationId: req.correlationId,
-    method: req.method,
-    url: req.url,
     userAgent: req.get('User-Agent'),
     ip: req.ip,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (process.env.NODE_ENV === 'production') {
-    console.log(JSON.stringify(requestLog));
-  } else {
-    console.log(
-      `[${requestLog.timestamp}] ${requestLog.method} ${requestLog.url} - ${requestLog.correlationId}`
-    );
-  }
+  });
 
   // Log response when request finishes
   res.on('finish', () => {
     const duration = Date.now() - req.startTime;
-    const responseLog = {
-      level: 'info',
-      type: 'response',
-      correlationId: req.correlationId,
-      method: req.method,
-      url: req.url,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      timestamp: new Date().toISOString(),
-    };
 
-    if (process.env.NODE_ENV === 'production') {
-      console.log(JSON.stringify(responseLog));
-    } else {
-      console.log(
-        `[${responseLog.timestamp}] ${responseLog.method} ${responseLog.url} - ${responseLog.statusCode} (${responseLog.duration})`
-      );
-    }
+    logger.response(req.method, req.url, res.statusCode, duration, {
+      correlationId: req.correlationId,
+    });
   });
 
   next();

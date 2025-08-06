@@ -1,5 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 import { pool } from '../config/database.js';
+import { logger } from '../utils/logger';
 
 export interface QueryOptions {
   limit?: number;
@@ -31,11 +32,13 @@ export abstract class BaseRepository<T> {
       const result = await client.query(text, params);
       return result;
     } catch (error) {
-      console.error(`Database query error in ${this.tableName}:`, {
-        error: error instanceof Error ? error.message : String(error),
+      logger.error(`Database query error in ${this.tableName}`, {
+        component: 'base-repository',
+        tableName: this.tableName,
+        errorMessage: error instanceof Error ? error.message : String(error),
         query: text.substring(0, 200), // Log first 200 chars of query for debugging
         table: this.tableName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       throw error;
     } finally {
@@ -53,20 +56,24 @@ export abstract class BaseRepository<T> {
     try {
       client = await this.pool.connect();
       await client.query('BEGIN');
-      
+
       const results = [];
       for (const query of queries) {
         const result = await client.query(query.text, query.params);
         results.push(result);
       }
-      
+
       await client.query('COMMIT');
       return results;
     } catch (error) {
       if (client) {
         await client.query('ROLLBACK');
       }
-      console.error(`Transaction error in ${this.tableName}:`, error);
+      logger.error(`Transaction error in ${this.tableName}`, {
+        component: 'base-repository',
+        tableName: this.tableName,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     } finally {
       if (client) {
