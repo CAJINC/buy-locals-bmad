@@ -41,11 +41,11 @@ export function isValidTimeFormat(time: string): boolean {
  */
 export function formatTo12Hour(time: string): string {
   if (!isValidTimeFormat(time)) return time;
-  
+
   const [hours, minutes] = time.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-  
+
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
@@ -77,21 +77,21 @@ export function isTimeInRange(
   try {
     const now = timezone ? convertToTimezone(currentTime, timezone) : currentTime;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    
+
     const [openHours, openMins] = openTime.split(':').map(Number);
     const [closeHours, closeMins] = closeTime.split(':').map(Number);
-    
+
     const openMinutes = openHours * 60 + openMins;
     const closeMinutes = closeHours * 60 + closeMins;
-    
+
     // Handle overnight businesses (close time is next day)
     if (closeMinutes <= openMinutes) {
       return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
     }
-    
+
     return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
   } catch (error) {
-    console.error('Error checking time range:', error);
+    // Handle error silently or log to error service
     return false;
   }
 }
@@ -103,7 +103,7 @@ export function convertToTimezone(date: Date, timezone: string): Date {
   try {
     return new Date(date.toLocaleString('en-US', { timeZone: timezone }));
   } catch (error) {
-    console.error('Error converting timezone:', error);
+    // Handle error silently or log to error service
     return date;
   }
 }
@@ -116,10 +116,10 @@ export function getTimezoneInfo(timezone?: string): TimeZoneInfo {
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     timezone = userTimezone;
   }
-  
+
   try {
     const now = new Date();
-    
+
     // Check if it's a common timezone with predefined info
     if (timezone in COMMON_TIMEZONES) {
       const commonTz = COMMON_TIMEZONES[timezone as keyof typeof COMMON_TIMEZONES];
@@ -129,27 +129,27 @@ export function getTimezoneInfo(timezone?: string): TimeZoneInfo {
         offset: getTimezoneOffset(timezone),
       };
     }
-    
+
     // Get timezone abbreviation from Intl API
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
-      timeZoneName: 'short'
+      timeZoneName: 'short',
     });
-    
+
     const parts = formatter.formatToParts(now);
     const abbreviation = parts.find(part => part.type === 'timeZoneName')?.value || '';
-    
+
     return {
       name: timezone.replace(/_/g, ' '),
       abbreviation,
       offset: getTimezoneOffset(timezone),
     };
   } catch (error) {
-    console.error('Error getting timezone info:', error);
-    return { 
-      name: timezone.replace(/_/g, ' '), 
-      abbreviation: '', 
-      offset: 0 
+    // Handle error silently or log to error service
+    return {
+      name: timezone.replace(/_/g, ' '),
+      abbreviation: '',
+      offset: 0,
     };
   }
 }
@@ -164,7 +164,7 @@ export function getTimezoneOffset(timezone: string): number {
     const target = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
     return (target.getTime() - utc.getTime()) / 60000;
   } catch (error) {
-    console.error('Error getting timezone offset:', error);
+    // Handle error silently or log to error service
     return 0;
   }
 }
@@ -172,18 +172,14 @@ export function getTimezoneOffset(timezone: string): number {
 /**
  * Calculates the next time the business status will change
  */
-export function getNextStatusChange(
-  hours: EnhancedBusinessHours,
-  currentTime: Date
-): Date | null {
+export function getNextStatusChange(hours: EnhancedBusinessHours, currentTime: Date): Date | null {
   const currentStatus = calculateBusinessStatus(hours, currentTime);
-  const startDayIndex = getCurrentDayIndex(currentTime);
-  
+
   // If currently open, find next close time
   if (currentStatus.isOpen) {
     return findNextCloseTime(hours, currentTime);
   }
-  
+
   // If currently closed, find next open time
   return findNextOpenTime(hours, currentTime);
 }
@@ -191,12 +187,9 @@ export function getNextStatusChange(
 /**
  * Finds the next opening time
  */
-export function findNextOpenTime(
-  hours: EnhancedBusinessHours,
-  currentTime: Date
-): Date | null {
+export function findNextOpenTime(hours: EnhancedBusinessHours, currentTime: Date): Date | null {
   const startDayIndex = getCurrentDayIndex(currentTime);
-  
+
   // Check next 7 days
   for (let i = 0; i < 7; i++) {
     const dayIndex = (startDayIndex + i) % 7;
@@ -204,12 +197,12 @@ export function findNextOpenTime(
     const checkDate = new Date(currentTime);
     checkDate.setDate(currentTime.getDate() + i);
     const dateString = checkDate.toISOString().split('T')[0];
-    
+
     // Check for temporary closures
     if (isTemporarilyClosed(hours, checkDate)) {
       continue;
     }
-    
+
     // Check special hours
     const specialHours = hours.specialHours?.[dateString];
     if (specialHours) {
@@ -220,7 +213,7 @@ export function findNextOpenTime(
       }
       continue;
     }
-    
+
     // Check regular hours
     const dayHours = hours[dayKey];
     if (dayHours && !dayHours.closed && !dayHours.isClosed && dayHours.open) {
@@ -229,41 +222,38 @@ export function findNextOpenTime(
       return openTime;
     }
   }
-  
+
   return null;
 }
 
 /**
  * Finds the next closing time
  */
-export function findNextCloseTime(
-  hours: EnhancedBusinessHours,
-  currentTime: Date
-): Date | null {
+export function findNextCloseTime(hours: EnhancedBusinessHours, currentTime: Date): Date | null {
   const currentDayKey = getDayKey(currentTime);
   const dateString = currentTime.toISOString().split('T')[0];
-  
+
   // Check special hours first
   const specialHours = hours.specialHours?.[dateString];
   if (specialHours && !specialHours.isClosed) {
     return createTimeOnDate(currentTime, specialHours.close, hours.timezone);
   }
-  
+
   // Check regular hours
   const dayHours = hours[currentDayKey];
   if (dayHours && !dayHours.closed && !dayHours.isClosed && dayHours.close) {
     const closeTime = createTimeOnDate(currentTime, dayHours.close, hours.timezone);
-    
+
     // Handle overnight businesses
     if (closeTime <= currentTime) {
       const nextDay = new Date(currentTime);
       nextDay.setDate(nextDay.getDate() + 1);
       return createTimeOnDate(nextDay, dayHours.close, hours.timezone);
     }
-    
+
     return closeTime;
   }
-  
+
   return null;
 }
 
@@ -274,7 +264,7 @@ export function createTimeOnDate(date: Date, timeString: string, timezone?: stri
   const [hours, minutes] = timeString.split(':').map(Number);
   const result = new Date(date);
   result.setHours(hours, minutes, 0, 0);
-  
+
   if (timezone) {
     // Convert from business timezone to local timezone
     const businessTime = new Date(result.toLocaleString('en-US', { timeZone: timezone }));
@@ -282,7 +272,7 @@ export function createTimeOnDate(date: Date, timeString: string, timezone?: stri
     const offset = businessTime.getTime() - localTime.getTime();
     result.setTime(result.getTime() - offset);
   }
-  
+
   return result;
 }
 
@@ -291,7 +281,7 @@ export function createTimeOnDate(date: Date, timeString: string, timezone?: stri
  */
 export function isTemporarilyClosed(hours: EnhancedBusinessHours, date: Date): boolean {
   if (!hours.temporaryClosures) return false;
-  
+
   return hours.temporaryClosures.some(closure => {
     const startDate = new Date(closure.startDate);
     const endDate = new Date(closure.endDate);
@@ -308,15 +298,18 @@ export function calculateBusinessStatus(
 ): BusinessStatus {
   const dayKey = getDayKey(currentTime);
   const dateString = currentTime.toISOString().split('T')[0];
-  
+
   // Check for temporary closures
   if (isTemporarilyClosed(hours, currentTime)) {
-    const closure = hours.temporaryClosures!.find(closure => {
+    const closure = hours.temporaryClosures?.find(closure => {
       const startDate = new Date(closure.startDate);
       const endDate = new Date(closure.endDate);
       return currentTime >= startDate && currentTime <= endDate;
-    })!;
-    
+    });
+    if (!closure) {
+      return { isOpen: false, nextChange: null, message: 'Business is closed' };
+    }
+
     return {
       isOpen: false,
       status: 'closed',
@@ -324,7 +317,7 @@ export function calculateBusinessStatus(
       nextChange: findNextOpenTime(hours, currentTime),
     };
   }
-  
+
   // Check for special hours
   const specialHours = hours.specialHours?.[dateString];
   if (specialHours) {
@@ -336,14 +329,14 @@ export function calculateBusinessStatus(
         nextChange: findNextOpenTime(hours, currentTime),
       };
     }
-    
+
     const isInSpecialHours = isTimeInRange(
       currentTime,
       specialHours.open,
       specialHours.close,
       hours.timezone
     );
-    
+
     return {
       isOpen: isInSpecialHours,
       status: isInSpecialHours ? 'open' : 'closed',
@@ -353,7 +346,7 @@ export function calculateBusinessStatus(
         : findNextOpenTime(hours, currentTime),
     };
   }
-  
+
   // Check regular hours
   const dayHours = hours[dayKey];
   if (!dayHours || dayHours.closed || dayHours.isClosed) {
@@ -363,7 +356,7 @@ export function calculateBusinessStatus(
       nextChange: findNextOpenTime(hours, currentTime),
     };
   }
-  
+
   if (!dayHours.open || !dayHours.close) {
     return {
       isOpen: false,
@@ -372,7 +365,7 @@ export function calculateBusinessStatus(
       nextChange: null,
     };
   }
-  
+
   // Handle 24-hour businesses
   if (dayHours.open === '00:00' && dayHours.close === '23:59') {
     return {
@@ -382,14 +375,9 @@ export function calculateBusinessStatus(
       nextChange: null,
     };
   }
-  
-  const isCurrentlyOpen = isTimeInRange(
-    currentTime,
-    dayHours.open,
-    dayHours.close,
-    hours.timezone
-  );
-  
+
+  const isCurrentlyOpen = isTimeInRange(currentTime, dayHours.open, dayHours.close, hours.timezone);
+
   return {
     isOpen: isCurrentlyOpen,
     status: isCurrentlyOpen ? 'open' : 'closed',
@@ -404,65 +392,65 @@ export function calculateBusinessStatus(
  */
 export function formatCountdown(timeUntil: number): string {
   const totalMinutes = Math.ceil(timeUntil / (1000 * 60));
-  
+
   if (totalMinutes <= 0) return 'Now';
-  
+
   const days = Math.floor(totalMinutes / (24 * 60));
   const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
   const minutes = totalMinutes % 60;
-  
+
   if (days > 0) {
     return `${days} day${days > 1 ? 's' : ''}`;
   }
-  
+
   if (hours > 0) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
-  
+
   return `${minutes}m`;
 }
 
 /**
  * Validates business hours data structure
  */
-export function validateBusinessHours(hours: any): {
+export function validateBusinessHours(hours: Record<string, unknown>): {
   isValid: boolean;
   errors: string[];
   warnings: string[];
 } {
   const errors: string[] = [];
   const warnings: string[] = [];
-  
+
   if (!hours || typeof hours !== 'object') {
     errors.push('Hours data must be a valid object');
     return { isValid: false, errors, warnings };
   }
-  
+
   // Validate regular hours
   for (const day of DAYS_OF_WEEK) {
     const dayHours = hours[day.key];
-    
+
     if (dayHours && !dayHours.closed && !dayHours.isClosed) {
       if (!dayHours.open || !dayHours.close) {
         warnings.push(`${day.label}: Missing open or close time`);
         continue;
       }
-      
+
       if (!isValidTimeFormat(dayHours.open)) {
         errors.push(`${day.label}: Invalid open time format - ${dayHours.open}`);
       }
-      
+
       if (!isValidTimeFormat(dayHours.close)) {
         errors.push(`${day.label}: Invalid close time format - ${dayHours.close}`);
       }
-      
+
       // Check for logical consistency
       if (dayHours.open === dayHours.close && dayHours.open !== '00:00') {
         warnings.push(`${day.label}: Open and close times are the same`);
       }
     }
   }
-  
+
   // Validate special hours
   if (hours.specialHours) {
     for (const [date, specialHour] of Object.entries(hours.specialHours)) {
@@ -470,8 +458,13 @@ export function validateBusinessHours(hours: any): {
         errors.push(`Special hours: Invalid date format - ${date}`);
         continue;
       }
-      
-      const sh = specialHour as any;
+
+      const sh = specialHour as {
+        isClosed?: boolean;
+        open?: string;
+        close?: string;
+        note?: string;
+      };
       if (!sh.isClosed) {
         if (!sh.open || !sh.close) {
           warnings.push(`Special hours (${date}): Missing open or close time`);
@@ -486,32 +479,34 @@ export function validateBusinessHours(hours: any): {
       }
     }
   }
-  
+
   // Validate temporary closures
   if (hours.temporaryClosures) {
-    hours.temporaryClosures.forEach((closure: any, index: number) => {
+    (
+      hours.temporaryClosures as Array<{ startDate?: string; endDate?: string; reason?: string }>
+    ).forEach((closure, index: number) => {
       if (!closure.startDate || !closure.endDate) {
         errors.push(`Temporary closure ${index + 1}: Missing start or end date`);
         return;
       }
-      
+
       const startDate = new Date(closure.startDate);
       const endDate = new Date(closure.endDate);
-      
+
       if (isNaN(startDate.getTime())) {
         errors.push(`Temporary closure ${index + 1}: Invalid start date`);
       }
-      
+
       if (isNaN(endDate.getTime())) {
         errors.push(`Temporary closure ${index + 1}: Invalid end date`);
       }
-      
+
       if (startDate > endDate) {
         errors.push(`Temporary closure ${index + 1}: Start date is after end date`);
       }
     });
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -537,25 +532,25 @@ export function groupConsecutiveDays(
     isCurrent: boolean;
     hasSpecialHours: boolean;
   }> = [];
-  
+
   let currentGroup: {
     days: string;
     hours: string;
     isCurrent: boolean;
     hasSpecialHours: boolean;
   } | null = null;
-  
+
   const currentDayIndex = getCurrentDayIndex(currentTime);
-  
+
   DAYS_OF_WEEK.forEach((day, index) => {
     const dayHours = hours[day.key];
     const checkDate = new Date(currentTime);
     checkDate.setDate(currentTime.getDate() + (index - currentDayIndex));
     const dateString = checkDate.toISOString().split('T')[0];
-    
+
     const { hoursString, hasSpecial } = formatHoursForGrouping(dayHours, hours, dateString);
     const isCurrent = index === currentDayIndex;
-    
+
     if (!currentGroup || currentGroup.hours !== hoursString) {
       // Start new group
       if (currentGroup) {
@@ -564,7 +559,7 @@ export function groupConsecutiveDays(
       currentGroup = {
         days: day.short,
         hours: hoursString,
-        isCurrent: isCurrent,
+        isCurrent,
         hasSpecialHours: hasSpecial,
       };
     } else {
@@ -574,11 +569,11 @@ export function groupConsecutiveDays(
       currentGroup.hasSpecialHours = currentGroup.hasSpecialHours || hasSpecial;
     }
   });
-  
+
   if (currentGroup) {
     groups.push(currentGroup);
   }
-  
+
   return groups;
 }
 
@@ -586,7 +581,7 @@ export function groupConsecutiveDays(
  * Formats hours for grouping comparison
  */
 function formatHoursForGrouping(
-  dayHours: any,
+  dayHours: { isOpen: boolean; open?: string; close?: string; note?: string },
   enhancedHours: EnhancedBusinessHours,
   dateString: string
 ): { hoursString: string; hasSpecial: boolean } {
@@ -604,35 +599,38 @@ function formatHoursForGrouping(
       hasSpecial: true,
     };
   }
-  
+
   // Check for temporary closures
   const checkDate = new Date(dateString);
   if (isTemporarilyClosed(enhancedHours, checkDate)) {
-    const closure = enhancedHours.temporaryClosures!.find(closure => {
+    const closure = enhancedHours.temporaryClosures?.find(closure => {
       const startDate = new Date(closure.startDate);
       const endDate = new Date(closure.endDate);
       return checkDate >= startDate && checkDate <= endDate;
-    })!;
-    
+    });
+    if (!closure) {
+      return { hoursString: 'Closed', hasSpecial: true };
+    }
+
     return {
       hoursString: `Closed - ${closure.reason}`,
       hasSpecial: true,
     };
   }
-  
+
   if (!dayHours || dayHours.closed || dayHours.isClosed) {
     return { hoursString: 'Closed', hasSpecial: false };
   }
-  
+
   if (!dayHours.open || !dayHours.close) {
     return { hoursString: 'Hours not set', hasSpecial: false };
   }
-  
+
   // Handle 24-hour businesses
   if (dayHours.open === '00:00' && dayHours.close === '23:59') {
     return { hoursString: '24 Hours', hasSpecial: false };
   }
-  
+
   return {
     hoursString: `${formatTo12Hour(dayHours.open)} - ${formatTo12Hour(dayHours.close)}`,
     hasSpecial: false,

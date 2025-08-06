@@ -5,8 +5,6 @@ import {
   Input,
   TextArea,
   Text,
-  Select,
-  CheckIcon,
   HStack,
   Checkbox,
   ScrollView,
@@ -32,11 +30,7 @@ const BUSINESS_CATEGORIES = [
   { value: 'events', label: 'Events & Celebrations' },
 ];
 
-export const BasicInfoStep: React.FC<FormStepProps> = ({
-  data,
-  onDataChange,
-  errors,
-}) => {
+export const BasicInfoStep: React.FC<FormStepProps> = ({ data, onDataChange, errors }) => {
   const getFieldError = (fieldName: string) => {
     return errors.find(error => error.field === fieldName)?.message;
   };
@@ -51,7 +45,7 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
 
   const handleCategoryToggle = (categoryValue: string, isSelected: boolean) => {
     const currentCategories = data.categories || [];
-    
+
     let newCategories: string[];
     if (isSelected) {
       // Add category if not already present and under limit of 3
@@ -64,7 +58,7 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
       // Remove category
       newCategories = currentCategories.filter(cat => cat !== categoryValue);
     }
-    
+
     onDataChange({ categories: newCategories });
   };
 
@@ -74,14 +68,12 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
       <FormControl isRequired isInvalid={!!getFieldError('name')}>
         <FormControl.Label>Business Name</FormControl.Label>
         <Input
-          placeholder=\"Enter your business name\"
+          placeholder="Enter your business name"
           value={data.name || ''}
           onChangeText={handleNameChange}
-          size=\"lg\"
+          size="lg"
         />
-        <FormControl.ErrorMessage>
-          {getFieldError('name')}
-        </FormControl.ErrorMessage>
+        <FormControl.ErrorMessage>{getFieldError('name')}</FormControl.ErrorMessage>
         <FormControl.HelperText>
           Choose a clear, memorable name for your business
         </FormControl.HelperText>
@@ -91,7 +83,7 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
       <FormControl>
         <FormControl.Label>Description</FormControl.Label>
         <TextArea
-          placeholder=\"Describe your business, services, or what makes you special...\"
+          placeholder="Describe your business, services, or what makes you special..."
           value={data.description || ''}
           onChangeText={handleDescriptionChange}
           numberOfLines={4}
@@ -105,29 +97,26 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
       {/* Business Categories */}
       <FormControl isRequired isInvalid={!!getFieldError('categories')}>
         <FormControl.Label>Business Categories</FormControl.Label>
-        <Text fontSize=\"sm\" color=\"gray.600\" mb={3}>
+        <Text fontSize="sm" color="gray.600" mb={3}>
           Select up to 3 categories that best describe your business
         </Text>
-        
+
         <ScrollView maxHeight={200}>
           <VStack space={2}>
-            {BUSINESS_CATEGORIES.map((category) => {
+            {BUSINESS_CATEGORIES.map(category => {
               const isSelected = (data.categories || []).includes(category.value);
               const isDisabled = !isSelected && (data.categories || []).length >= 3;
-              
+
               return (
                 <Checkbox
                   key={category.value}
                   value={category.value}
                   isChecked={isSelected}
                   isDisabled={isDisabled}
-                  onChange={(isChecked) => handleCategoryToggle(category.value, isChecked)}
-                  colorScheme=\"blue\"
+                  onChange={isChecked => handleCategoryToggle(category.value, isChecked)}
+                  colorScheme="blue"
                 >
-                  <Text 
-                    color={isDisabled ? 'gray.400' : 'black'}
-                    fontSize=\"md\"
-                  >
+                  <Text color={isDisabled ? 'gray.400' : 'black'} fontSize="md">
                     {category.label}
                   </Text>
                 </Checkbox>
@@ -135,10 +124,8 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
             })}
           </VStack>
         </ScrollView>
-        
-        <FormControl.ErrorMessage>
-          {getFieldError('categories')}
-        </FormControl.ErrorMessage>
+
+        <FormControl.ErrorMessage>{getFieldError('categories')}</FormControl.ErrorMessage>
         <FormControl.HelperText>
           Selected: {(data.categories || []).length}/3 categories
         </FormControl.HelperText>
@@ -147,21 +134,21 @@ export const BasicInfoStep: React.FC<FormStepProps> = ({
       {/* Show selected categories */}
       {data.categories && data.categories.length > 0 && (
         <VStack space={2}>
-          <Text fontSize=\"sm\" fontWeight=\"semibold\" color=\"blue.600\">
+          <Text fontSize="sm" fontWeight="semibold" color="blue.600">
             Selected Categories:
           </Text>
-          <HStack space={2} flexWrap=\"wrap\">
-            {data.categories.map((categoryValue) => {
+          <HStack space={2} flexWrap="wrap">
+            {data.categories.map(categoryValue => {
               const category = BUSINESS_CATEGORIES.find(cat => cat.value === categoryValue);
               return (
                 <Text
                   key={categoryValue}
-                  bg=\"blue.100\"
-                  color=\"blue.800\"
+                  bg="blue.100"
+                  color="blue.800"
                   px={3}
                   py={1}
-                  rounded=\"full\"
-                  fontSize=\"sm\"
+                  rounded="full"
+                  fontSize="sm"
                 >
                   {category?.label || categoryValue}
                 </Text>

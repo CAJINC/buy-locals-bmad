@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  VStack,
-  HStack,
-  Text,
-  Switch,
-  Select,
-  CheckIcon,
-  FormControl,
-  Divider,
-} from 'native-base';
+import { VStack, HStack, Text, Switch, Select, CheckIcon, FormControl, Divider } from 'native-base';
 import { FormStepProps } from '../types';
 
 const DAYS_OF_WEEK = [
@@ -41,7 +32,10 @@ const TIME_OPTIONS = generateTimeOptions();
 interface DayHoursProps {
   day: { key: string; label: string };
   hours: { open?: string; close?: string; closed?: boolean } | undefined;
-  onHoursChange: (dayKey: string, hours: { open?: string; close?: string; closed?: boolean }) => void;
+  onHoursChange: (
+    dayKey: string,
+    hours: { open?: string; close?: string; closed?: boolean }
+  ) => void;
 }
 
 const DayHours: React.FC<DayHoursProps> = ({ day, hours, onHoursChange }) => {
@@ -66,39 +60,36 @@ const DayHours: React.FC<DayHoursProps> = ({ day, hours, onHoursChange }) => {
   };
 
   return (
-    <VStack space={3} bg=\"gray.50\" p={4} rounded=\"md\">
-      <HStack justifyContent=\"space-between\" alignItems=\"center\">
-        <Text fontSize=\"md\" fontWeight=\"semibold\" flex={1}>
+    <VStack space={3} bg="gray.50" p={4} rounded="md">
+      <HStack justifyContent="space-between" alignItems="center">
+        <Text fontSize="md" fontWeight="semibold" flex={1}>
           {day.label}
         </Text>
-        <HStack space={2} alignItems=\"center\">
-          <Text fontSize=\"sm\" color={isClosed ? 'red.600' : 'green.600'}>
+        <HStack space={2} alignItems="center">
+          <Text fontSize="sm" color={isClosed ? 'red.600' : 'green.600'}>
             {isClosed ? 'Closed' : 'Open'}
           </Text>
-          <Switch
-            isChecked={isClosed}
-            onToggle={handleClosedToggle}
-            colorScheme=\"red\"
-            size=\"sm\"
-          />
+          <Switch isChecked={isClosed} onToggle={handleClosedToggle} colorScheme="red" size="sm" />
         </HStack>
       </HStack>
 
       {!isClosed && (
-        <HStack space={3} alignItems=\"center\">
+        <HStack space={3} alignItems="center">
           <VStack flex={1}>
-            <Text fontSize=\"xs\" color=\"gray.600\" mb={1}>Opening Time</Text>
+            <Text fontSize="xs" color="gray.600" mb={1}>
+              Opening Time
+            </Text>
             <Select
               selectedValue={openTime}
-              onValueChange={(value) => handleTimeChange('open', value)}
-              placeholder=\"Select opening time\"
-              size=\"sm\"
+              onValueChange={value => handleTimeChange('open', value)}
+              placeholder="Select opening time"
+              size="sm"
               _selectedItem={{
                 bg: 'blue.600',
                 endIcon: <CheckIcon size={2} />,
               }}
             >
-              {TIME_OPTIONS.map((timeOption) => (
+              {TIME_OPTIONS.map(timeOption => (
                 <Select.Item
                   key={timeOption.value}
                   label={timeOption.label}
@@ -108,23 +99,25 @@ const DayHours: React.FC<DayHoursProps> = ({ day, hours, onHoursChange }) => {
             </Select>
           </VStack>
 
-          <Text fontSize=\"lg\" color=\"gray.400\" mt={4}>
+          <Text fontSize="lg" color="gray.400" mt={4}>
             to
           </Text>
 
           <VStack flex={1}>
-            <Text fontSize=\"xs\" color=\"gray.600\" mb={1}>Closing Time</Text>
+            <Text fontSize="xs" color="gray.600" mb={1}>
+              Closing Time
+            </Text>
             <Select
               selectedValue={closeTime}
-              onValueChange={(value) => handleTimeChange('close', value)}
-              placeholder=\"Select closing time\"
-              size=\"sm\"
+              onValueChange={value => handleTimeChange('close', value)}
+              placeholder="Select closing time"
+              size="sm"
               _selectedItem={{
                 bg: 'blue.600',
                 endIcon: <CheckIcon size={2} />,
               }}
             >
-              {TIME_OPTIONS.map((timeOption) => (
+              {TIME_OPTIONS.map(timeOption => (
                 <Select.Item
                   key={timeOption.value}
                   label={timeOption.label}
@@ -139,16 +132,15 @@ const DayHours: React.FC<DayHoursProps> = ({ day, hours, onHoursChange }) => {
   );
 };
 
-export const BusinessHoursStep: React.FC<FormStepProps> = ({
-  data,
-  onDataChange,
-  errors,
-}) => {
+export const BusinessHoursStep: React.FC<FormStepProps> = ({ data, onDataChange, errors }) => {
   const getFieldError = (fieldName: string) => {
     return errors.find(error => error.field === fieldName)?.message;
   };
 
-  const handleDayHoursChange = (dayKey: string, dayHours: { open?: string; close?: string; closed?: boolean }) => {
+  const handleDayHoursChange = (
+    dayKey: string,
+    dayHours: { open?: string; close?: string; closed?: boolean }
+  ) => {
     const updatedHours = {
       ...data.hours,
       [dayKey]: dayHours,
@@ -156,31 +148,11 @@ export const BusinessHoursStep: React.FC<FormStepProps> = ({
     onDataChange({ hours: updatedHours });
   };
 
-  const copyHours = (fromDay: string, toDay: string) => {
-    const fromHours = data.hours?.[fromDay];
-    if (fromHours) {
-      handleDayHoursChange(toDay, { ...fromHours });
-    }
-  };
-
-  const setAllDaysSame = (templateDay: string) => {
-    const templateHours = data.hours?.[templateDay];
-    if (templateHours) {
-      const updatedHours = { ...data.hours };
-      DAYS_OF_WEEK.forEach(day => {
-        if (day.key !== templateDay) {
-          updatedHours[day.key] = { ...templateHours };
-        }
-      });
-      onDataChange({ hours: updatedHours });
-    }
-  };
-
   // Quick actions for common patterns
   const setWeekdayHours = () => {
     const weekdayHours = { open: '09:00', close: '17:00', closed: false };
     const weekendHours = { closed: true };
-    
+
     const updatedHours = {
       monday: weekdayHours,
       tuesday: weekdayHours,
@@ -190,57 +162,58 @@ export const BusinessHoursStep: React.FC<FormStepProps> = ({
       saturday: weekendHours,
       sunday: weekendHours,
     };
-    
+
     onDataChange({ hours: updatedHours });
   };
 
   const setEveryDayOpen = () => {
     const dailyHours = { open: '09:00', close: '17:00', closed: false };
     const updatedHours = {};
-    
+
     DAYS_OF_WEEK.forEach(day => {
       updatedHours[day.key] = { ...dailyHours };
     });
-    
+
     onDataChange({ hours: updatedHours });
   };
 
   return (
     <VStack space={6}>
       <VStack space={2}>
-        <Text fontSize=\"lg\" fontWeight=\"semibold\" color=\"gray.800\">
+        <Text fontSize="lg" fontWeight="semibold" color="gray.800">
           Business Hours
         </Text>
-        <Text fontSize=\"sm\" color=\"gray.600\">
-          Set your operating hours for each day of the week. Toggle the switch to mark days as closed.
+        <Text fontSize="sm" color="gray.600">
+          Set your operating hours for each day of the week. Toggle the switch to mark days as
+          closed.
         </Text>
       </VStack>
 
       {/* Quick Actions */}
-      <VStack space={3} bg=\"blue.50\" p={4} rounded=\"md\">
-        <Text fontSize=\"sm\" fontWeight=\"semibold\" color=\"blue.800\">
+      <VStack space={3} bg="blue.50" p={4} rounded="md">
+        <Text fontSize="sm" fontWeight="semibold" color="blue.800">
           Quick Setup:
         </Text>
-        <HStack space={2} flexWrap=\"wrap\">
+        <HStack space={2} flexWrap="wrap">
           <Text
             onPress={setWeekdayHours}
-            bg=\"blue.100\"
-            color=\"blue.800\"
+            bg="blue.100"
+            color="blue.800"
             px={3}
             py={2}
-            rounded=\"md\"
-            fontSize=\"sm\"
+            rounded="md"
+            fontSize="sm"
           >
             Mon-Fri 9AM-5PM
           </Text>
           <Text
             onPress={setEveryDayOpen}
-            bg=\"blue.100\"
-            color=\"blue.800\"
+            bg="blue.100"
+            color="blue.800"
             px={3}
             py={2}
-            rounded=\"md\"
-            fontSize=\"sm\"
+            rounded="md"
+            fontSize="sm"
           >
             Every Day 9AM-5PM
           </Text>
@@ -250,9 +223,7 @@ export const BusinessHoursStep: React.FC<FormStepProps> = ({
       {/* Error Display */}
       {getFieldError('hours') && (
         <FormControl isInvalid>
-          <FormControl.ErrorMessage>
-            {getFieldError('hours')}
-          </FormControl.ErrorMessage>
+          <FormControl.ErrorMessage>{getFieldError('hours')}</FormControl.ErrorMessage>
         </FormControl>
       )}
 
@@ -271,23 +242,25 @@ export const BusinessHoursStep: React.FC<FormStepProps> = ({
       </VStack>
 
       {/* Summary */}
-      <VStack space={2} bg=\"gray.50\" p={4} rounded=\"md\">
-        <Text fontSize=\"sm\" fontWeight=\"semibold\" color=\"gray.700\">
+      <VStack space={2} bg="gray.50" p={4} rounded="md">
+        <Text fontSize="sm" fontWeight="semibold" color="gray.700">
           Hours Summary:
         </Text>
         <VStack space={1}>
-          {DAYS_OF_WEEK.map((day) => {
+          {DAYS_OF_WEEK.map(day => {
             const dayHours = data.hours?.[day.key];
-            const displayText = dayHours?.closed 
+            const displayText = dayHours?.closed
               ? 'Closed'
               : dayHours?.open && dayHours?.close
                 ? `${formatTime(dayHours.open)} - ${formatTime(dayHours.close)}`
                 : 'Not set';
-            
+
             return (
-              <HStack key={day.key} justifyContent=\"space-between\">
-                <Text fontSize=\"sm\" color=\"gray.600\">{day.label}:</Text>
-                <Text fontSize=\"sm\" color={dayHours?.closed ? 'red.600' : 'gray.800'}>
+              <HStack key={day.key} justifyContent="space-between">
+                <Text fontSize="sm" color="gray.600">
+                  {day.label}:
+                </Text>
+                <Text fontSize="sm" color={dayHours?.closed ? 'red.600' : 'gray.800'}>
                   {displayText}
                 </Text>
               </HStack>

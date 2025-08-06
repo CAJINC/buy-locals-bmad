@@ -1,13 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import {
-  Box,
-  HStack,
-  VStack,
-  Text,
-  Pressable,
-  Icon,
-  Center,
-} from 'native-base';
+import { Box, HStack, VStack, Text, Pressable, Icon } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Alert, Dimensions } from 'react-native';
 
@@ -21,7 +13,7 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
   media,
   onImagePress,
   maxImages = 6,
-  aspectRatio = 1,
+  aspectRatio: _aspectRatio = 1,
   enableZoom = true,
   enableGestures = true,
   lazyLoadingEnabled = true,
@@ -56,28 +48,24 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
   const remainingCount = photos.length - maxImages;
 
   // Enhanced image press handler with error handling
-  const handleImagePress = useCallback((photo: PhotoItem, index: number) => {
-    try {
-      if (onImagePress) {
-        onImagePress(photo.url, index);
-      } else {
-        setSelectedImageIndex(index);
-        setLightboxVisible(true);
+  const handleImagePress = useCallback(
+    (photo: PhotoItem, index: number) => {
+      try {
+        if (onImagePress) {
+          onImagePress(photo.url, index);
+        } else {
+          setSelectedImageIndex(index);
+          setLightboxVisible(true);
+        }
+      } catch (error) {
+        // Handle error silently or log to error service
+        Alert.alert('Error', 'Unable to open image. Please try again.');
       }
-    } catch (error) {
-      console.error('Error opening image:', error);
-      Alert.alert('Error', 'Unable to open image. Please try again.');
-    }
-  }, [onImagePress]);
+    },
+    [onImagePress]
+  );
 
   // Lightbox navigation handlers
-  const handleNextImage = useCallback(() => {
-    setSelectedImageIndex((prev) => (prev + 1) % photos.length);
-  }, [photos.length]);
-
-  const handlePrevImage = useCallback(() => {
-    setSelectedImageIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  }, [photos.length]);
 
   const handleLightboxIndexChange = useCallback((index: number) => {
     setSelectedImageIndex(index);
@@ -101,15 +89,6 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
     });
   }, []);
 
-  const handleImageError = useCallback((imageId: string) => {
-    setImageLoading(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(imageId);
-      return newSet;
-    });
-    setImageErrors(prev => new Set([...prev, imageId]));
-  }, []);
-
   // View all photos handler
   const handleViewAllPhotos = useCallback(() => {
     setSelectedImageIndex(0);
@@ -118,7 +97,7 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
 
   // Toggle gallery mode
   const handleToggleGalleryMode = useCallback(() => {
-    setGalleryMode(prev => prev === 'grid' ? 'horizontal' : 'grid');
+    setGalleryMode(prev => (prev === 'grid' ? 'horizontal' : 'grid'));
   }, []);
 
   // Preload images for better performance
@@ -146,17 +125,12 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
         justifyContent="center"
         minH="200px"
       >
-        <Icon
-          as={MaterialIcons}
-          name="photo-library"
-          size="3xl"
-          color="gray.400"
-        />
+        <Icon as={MaterialIcons} name="photo-library" size="3xl" color="gray.400" />
         <Text color="gray.500" fontSize="lg" mt={3} fontWeight="medium">
           No Photos Available
         </Text>
         <Text color="gray.400" fontSize="sm" mt={1} textAlign="center">
-          Photos will appear here once they're uploaded
+          Photos will appear here once they&apos;re uploaded
         </Text>
       </Box>
     );
@@ -176,7 +150,7 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
             </Text>
           )}
         </VStack>
-        
+
         {photos.length > 0 && (
           <HStack space={2} alignItems="center">
             {/* Gallery Mode Toggle */}
@@ -194,17 +168,12 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
                 />
               </Box>
             </Pressable>
-            
+
             {/* View All Button */}
             {photos.length > 3 && (
               <Pressable onPress={handleViewAllPhotos}>
                 <HStack space={1} alignItems="center">
-                  <Icon
-                    as={MaterialIcons}
-                    name="photo-library"
-                    size="sm"
-                    color="blue.600"
-                  />
+                  <Icon as={MaterialIcons} name="photo-library" size="sm" color="blue.600" />
                   <Text color="blue.600" fontSize="sm" fontWeight="medium">
                     View All
                   </Text>
@@ -261,13 +230,10 @@ export const BusinessPhotoGallery: React.FC<BusinessPhotoGalleryProps> = ({
                   />
                 </Box>
               ))}
-              
+
               {/* Show More Button */}
               {remainingCount > 0 && (
-                <Pressable
-                  flex={1}
-                  onPress={handleViewAllPhotos}
-                >
+                <Pressable flex={1} onPress={handleViewAllPhotos}>
                   <Box
                     width={(screenWidth - 48) / 3}
                     height={100}

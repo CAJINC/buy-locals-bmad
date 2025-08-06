@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Pressable,
-  Skeleton,
-  Icon,
-  Text,
-  VStack,
-  Center,
-} from 'native-base';
+import { Box, Pressable, Skeleton, Icon, Text, VStack, Center } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
 import FastImage from 'react-native-fast-image';
 import { PhotoItem as PhotoItemType } from './types';
@@ -30,7 +22,7 @@ export const PhotoItem: React.FC<PhotoItemProps> = ({
   width,
   height,
   borderRadius = 8,
-  lazy = true,
+  lazy: _lazy = true,
   priority = FastImage.priority.normal,
   showMetadata = false,
   placeholder = false,
@@ -38,6 +30,16 @@ export const PhotoItem: React.FC<PhotoItemProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Image style with dynamic opacity
+  const imageStyle = React.useMemo(
+    () => ({
+      width: '100%',
+      height: '100%',
+      opacity: imageLoaded ? 1 : 0,
+    }),
+    [imageLoaded]
+  );
 
   const handleLoadStart = () => {
     setLoading(true);
@@ -67,18 +69,8 @@ export const PhotoItem: React.FC<PhotoItemProps> = ({
 
   if (placeholder) {
     return (
-      <Box
-        width={width}
-        height={height}
-        borderRadius={borderRadius}
-        overflow="hidden"
-      >
-        <Skeleton
-          width="100%"
-          height="100%"
-          startColor="gray.100"
-          endColor="gray.200"
-        />
+      <Box width={width} height={height} borderRadius={borderRadius} overflow="hidden">
+        <Skeleton width="100%" height="100%" startColor="gray.100" endColor="gray.200" />
       </Box>
     );
   }
@@ -108,19 +100,8 @@ export const PhotoItem: React.FC<PhotoItemProps> = ({
 
           {/* Error State */}
           {error && (
-            <Center
-              position="absolute"
-              width="100%"
-              height="100%"
-              bg="gray.200"
-              zIndex={2}
-            >
-              <Icon
-                as={MaterialIcons}
-                name="broken-image"
-                size="lg"
-                color="gray.400"
-              />
+            <Center position="absolute" width="100%" height="100%" bg="gray.200" zIndex={2}>
+              <Icon as={MaterialIcons} name="broken-image" size="lg" color="gray.400" />
               <Text color="gray.500" fontSize="xs" mt={1}>
                 Failed to load
               </Text>
@@ -132,13 +113,9 @@ export const PhotoItem: React.FC<PhotoItemProps> = ({
             <FastImage
               source={{
                 uri: photo.url,
-                priority: priority,
+                priority,
               }}
-              style={{
-                width: '100%',
-                height: '100%',
-                opacity: imageLoaded ? 1 : 0,
-              }}
+              style={imageStyle}
               onLoadStart={handleLoadStart}
               onLoad={handleLoad}
               onError={handleError}
@@ -197,18 +174,8 @@ export const PhotoItemPlaceholder: React.FC<{
   borderRadius?: number;
 }> = ({ width, height, borderRadius = 8 }) => {
   return (
-    <Box
-      width={width}
-      height={height}
-      borderRadius={borderRadius}
-      overflow="hidden"
-    >
-      <Skeleton
-        width="100%"
-        height="100%"
-        startColor="gray.100"
-        endColor="gray.200"
-      />
+    <Box width={width} height={height} borderRadius={borderRadius} overflow="hidden">
+      <Skeleton width="100%" height="100%" startColor="gray.100" endColor="gray.200" />
     </Box>
   );
 };

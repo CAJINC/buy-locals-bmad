@@ -1,21 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  Box,
-  Image,
-  Skeleton,
-  Center,
-  Icon,
-  Text,
-  VStack,
-  useColorModeValue,
-} from 'native-base';
+import { Box, Skeleton, Center, Icon, Text, VStack, useColorModeValue } from 'native-base';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Dimensions, LayoutChangeEvent } from 'react-native';
-import FastImage, { FastImageProps, ResizeMode } from 'react-native-fast-image';
+import { LayoutChangeEvent } from 'react-native';
+import FastImage, { ResizeMode } from 'react-native-fast-image';
 import { ImageOptimizer, LazyLoader, PerformanceMonitor } from './utils/performanceUtils';
 import { AccessibilityHelper, ScreenReaderOptimizer } from './utils/accessibilityUtils';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 export interface OptimizedImageProps {
   source: { uri: string } | number;
@@ -31,15 +20,15 @@ export interface OptimizedImageProps {
   cache?: 'immutable' | 'web' | 'cacheOnly';
   quality?: number;
   onLoad?: () => void;
-  onError?: (error: any) => void;
+  onError?: (error: Error) => void;
   onPress?: () => void;
   testID?: string;
   accessible?: boolean;
   accessibilityRole?: 'image' | 'button';
   accessibilityLabel?: string;
   accessibilityHint?: string;
-  style?: any;
-  containerStyle?: any;
+  style?: Record<string, unknown>;
+  containerStyle?: Record<string, unknown>;
 }
 
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -49,8 +38,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   resizeMode = FastImage.resizeMode.cover,
   borderRadius = 0,
   alt,
-  placeholder = 'Loading image...',
-  fallbackIcon = 'image',
+  placeholder: _placeholder = 'Loading image...',
+  fallbackIcon: _fallbackIcon = 'image',
   lazyLoad = true,
   preload = false,
   cache = 'immutable',
@@ -71,9 +60,10 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const [visible, setVisible] = useState(!lazyLoad);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const imageRef = useRef<string>(Math.random().toString());
-  
+
   // Theme-based colors
   const skeletonColor = useColorModeValue('gray.200', 'gray.600');
+  const skeletonEndColor = useColorModeValue('gray.300', 'gray.500');
   const errorBgColor = useColorModeValue('gray.100', 'gray.700');
   const errorIconColor = useColorModeValue('gray.400', 'gray.500');
   const errorTextColor = useColorModeValue('gray.500', 'gray.400');
@@ -87,7 +77,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Get optimized source URI
   const optimizedSource = React.useMemo(() => {
     if (typeof source === 'number') return source;
-    
+
     const sourceUri = source.uri;
     if (!sourceUri || !containerSize.width || !containerSize.height) {
       return source;
@@ -112,7 +102,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     if (lazyLoad && !visible) {
       const itemId = imageRef.current;
       LazyLoader.register(itemId, () => setVisible(true));
-      
+
       // Simulate intersection observer logic
       // In a real implementation, this would use actual intersection observer
       const timer = setTimeout(() => {
@@ -142,12 +132,15 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   }, [onLoad]);
 
   // Handle image error
-  const handleImageError = useCallback((errorEvent: any) => {
-    PerformanceMonitor.endMeasure(`image_load_${imageRef.current}`);
-    setLoading(false);
-    setError(true);
-    onError?.(errorEvent);
-  }, [onError]);
+  const handleImageError = useCallback(
+    (errorEvent: { nativeEvent: { error: string } }) => {
+      PerformanceMonitor.endMeasure(`image_load_${imageRef.current}`);
+      setLoading(false);
+      setError(true);
+      onError?.(errorEvent);
+    },
+    [onError]
+  );
 
   // Start performance measurement when loading begins
   useEffect(() => {
@@ -185,13 +178,25 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     };
   }, [accessible, accessibilityRole, accessibilityLabel, accessibilityHint, alt, onPress]);
 
+  // Styles for image loading state
+  const hiddenImageStyle = React.useMemo(
+    () => ({
+      position: 'absolute' as const,
+      width: '100%',
+      height: '100%',
+      opacity: 0,
+      borderRadius,
+    }),
+    [borderRadius]
+  );
+
   // Render loading skeleton
   const renderSkeleton = () => (
     <Skeleton
       isLoaded={false}
       borderRadius={borderRadius}
       startColor={skeletonColor}
-      endColor={useColorModeValue('gray.300', 'gray.500')}
+      endColor={skeletonEndColor}
     >
       <Box width={width} height={height} />
     </Skeleton>
@@ -208,12 +213,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       accessibilityLabel="Image failed to load"
     >
       <VStack space={2} alignItems="center">
-        <Icon
-          as={MaterialIcons}
-          name="broken-image"
-          size="xl"
-          color={errorIconColor}
-        />
+        <Icon as={MaterialIcons} name="broken-image" size="xl" color={errorIconColor} />
         <Text fontSize="xs" color={errorTextColor} textAlign="center">
           Image unavailable
         </Text>
@@ -228,7 +228,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         width={width}
         height={height}
         onLayout={handleLayout}
-        style={[containerStyle]}
+        style={containerStyle}
         testID={testID}
       >
         {renderSkeleton()}
@@ -239,11 +239,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Render error state
   if (error) {
     return (
-      <Box
-        style={[containerStyle]}
-        testID={testID}
-        onLayout={handleLayout}
-      >
+      <Box style={containerStyle} testID={testID} onLayout={handleLayout}>
         {renderError()}
       </Box>
     );
@@ -252,22 +248,12 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Render loading state
   if (loading) {
     return (
-      <Box
-        style={[containerStyle]}
-        testID={testID}
-        onLayout={handleLayout}
-      >
+      <Box style={containerStyle} testID={testID} onLayout={handleLayout}>
         {renderSkeleton()}
         {visible && (
           <FastImage
             source={optimizedSource}
-            style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              opacity: 0,
-              borderRadius,
-            }}
+            style={hiddenImageStyle}
             resizeMode={resizeMode}
             onLoad={handleImageLoad}
             onError={handleImageError}
@@ -280,11 +266,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   // Render loaded image
   return (
-    <Box
-      style={[containerStyle]}
-      testID={testID}
-      onLayout={handleLayout}
-    >
+    <Box style={containerStyle} testID={testID} onLayout={handleLayout}>
       <FastImage
         source={optimizedSource}
         style={[
@@ -300,7 +282,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         onError={handleImageError}
         {...accessibilityProps}
       />
-      
+
       {onPress && (
         <Box
           position="absolute"
@@ -317,7 +299,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 };
 
 // Specialized image components for different use cases
-export const BusinessLogoImage: React.FC<Omit<OptimizedImageProps, 'resizeMode' | 'accessibilityRole'>> = (props) => (
+export const BusinessLogoImage: React.FC<
+  Omit<OptimizedImageProps, 'resizeMode' | 'accessibilityRole'>
+> = props => (
   <OptimizedImage
     {...props}
     resizeMode={FastImage.resizeMode.contain}
@@ -326,20 +310,12 @@ export const BusinessLogoImage: React.FC<Omit<OptimizedImageProps, 'resizeMode' 
   />
 );
 
-export const BusinessPhotoImage: React.FC<Omit<OptimizedImageProps, 'resizeMode'>> = (props) => (
-  <OptimizedImage
-    {...props}
-    resizeMode={FastImage.resizeMode.cover}
-    fallbackIcon="photo"
-  />
+export const BusinessPhotoImage: React.FC<Omit<OptimizedImageProps, 'resizeMode'>> = props => (
+  <OptimizedImage {...props} resizeMode={FastImage.resizeMode.cover} fallbackIcon="photo" />
 );
 
-export const ThumbnailImage: React.FC<Omit<OptimizedImageProps, 'quality' | 'cache'>> = (props) => (
-  <OptimizedImage
-    {...props}
-    quality={60}
-    cache="web"
-  />
+export const ThumbnailImage: React.FC<Omit<OptimizedImageProps, 'quality' | 'cache'>> = props => (
+  <OptimizedImage {...props} quality={60} cache="web" />
 );
 
 // Higher-order component for image preloading
@@ -347,7 +323,7 @@ export const withImagePreloading = <P extends object>(
   Component: React.ComponentType<P>,
   imageUrls: string[]
 ) => {
-  return React.forwardRef<any, P>((props, ref) => {
+  return React.forwardRef<React.ElementRef<typeof Component>, P>((props, ref) => {
     useEffect(() => {
       const sources = imageUrls.map(uri => ({ uri }));
       FastImage.preload(sources);

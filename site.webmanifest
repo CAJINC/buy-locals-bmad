@@ -1,0 +1,106 @@
+{
+  "name": "Buy Locals - Support Local Business Marketplace",
+  "short_name": "Buy Locals",
+  "description": "Community-driven marketplace connecting neighbors with local businesses. Support your community and create measurable economic impact.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a085",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Join Early Access",
+      "short_name": "Early Access",
+      "description": "Join the Buy Locals early access waitlist",
+      "url": "/#early-access",
+      "icons": [
+        {
+          "src": "/icons/shortcut-early-access.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Business Owners",
+      "short_name": "For Business",
+      "description": "Information for local business owners",
+      "url": "/business-owners",
+      "icons": [
+        {
+          "src": "/icons/shortcut-business.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "categories": ["business", "shopping", "lifestyle", "social"],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Buy Locals homepage on desktop"
+    },
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "360x640",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Buy Locals homepage on mobile"
+    }
+  ]
+}

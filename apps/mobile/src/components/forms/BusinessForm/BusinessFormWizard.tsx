@@ -1,25 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  VStack,
-  HStack,
-  Text,
-  Progress,
-  Button,
-  useToast,
-  ScrollView,
-} from 'native-base';
+import { Box, VStack, HStack, Text, Progress, Button, useToast, ScrollView } from 'native-base';
 import { BusinessFormProps, FormFieldError, FormStepId } from './types';
 import { BusinessFormData } from '../../../services/businessService';
 import { useBusinessStore } from '../../../stores/businessStore';
 import { navigationService } from '../../../services/navigationService';
-import { FORM_STEPS, getCurrentStepIndex, getNextStep, getPreviousStep, validateFormData } from './formSteps';
+import {
+  FORM_STEPS,
+  getCurrentStepIndex,
+  getNextStep,
+  getPreviousStep,
+  validateFormData,
+} from './formSteps';
 
 // Enhanced components
-import { StepIndicator } from './components/StepIndicator';
-import { ValidationSummary } from './components/ValidationSummary';
-import { ConfirmationDialog, useConfirmationDialog, DialogConfigs } from './components/ConfirmationDialog';
-import { SuccessScreen } from './components/SuccessScreen';
 
 // Step Components
 import { BasicInfoStep } from './steps/BasicInfoStep';
@@ -33,19 +26,15 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
   onSubmit,
   onCancel,
   isEditing = false,
-  businessId,
+  businessId: _businessId,
 }) => {
   const [currentStepId, setCurrentStepId] = useState<FormStepId>('basic-info');
   const [formData, setFormData] = useState<Partial<BusinessFormData>>(initialData);
   const [errors, setErrors] = useState<FormFieldError[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [submittedBusiness, setSubmittedBusiness] = useState<any>(null);
-  
+
   const { isLoading, error, saveDraft, loadDraft, clearDraft } = useBusinessStore();
   const toast = useToast();
-  const { dialog, showDialog } = useConfirmationDialog();
 
   const currentStepIndex = getCurrentStepIndex(currentStepId);
   const currentStep = FORM_STEPS[currentStepIndex];
@@ -94,7 +83,7 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
 
   const validateCurrentStep = (): boolean => {
     const stepErrors: FormFieldError[] = [];
-    
+
     if (!currentStep.isValid(formData)) {
       // Add specific validation errors based on step
       for (const field of currentStep.requiredFields) {
@@ -134,13 +123,6 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
     }
   };
 
-  const handleStepPress = (stepId: string, stepIndex: number) => {
-    // Allow navigation to completed steps or the current step
-    if (completedSteps.includes(stepId) || stepIndex <= currentStepIndex) {
-      setCurrentStepId(stepId as FormStepId);
-    }
-  };
-
   const handlePrevious = () => {
     const previousStep = getPreviousStep(currentStepId);
     if (previousStep) {
@@ -167,16 +149,16 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
     try {
       setIsSubmitting(true);
       const result = await onSubmit(formData as BusinessFormData);
-      
+
       // Clear draft after successful submission
       if (!isEditing) {
         clearDraft();
       }
-      
+
       // Store the result for success screen
       setSubmittedBusiness(result);
       setShowSuccess(true);
-      
+
       toast.show({
         title: 'Success',
         description: isEditing ? 'Business updated successfully' : 'Business created successfully',
@@ -189,21 +171,10 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
           navigationService.navigateToBusinessProfile(result.id, result);
         }
       }, 2000);
-      
     } catch (error) {
-      console.error('Form submission error:', error);
+      // Handle form submission error silently or log to error service
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (Object.keys(formData).length > 0) {
-      showDialog(DialogConfigs.CANCEL_FORM, () => {
-        onCancel();
-      });
-    } else {
-      onCancel();
     }
   };
 
@@ -234,25 +205,25 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
   };
 
   return (
-    <Box flex={1} bg=\"white\" safeArea>
+    <Box flex={1} bg="white" safeArea>
       {/* Header with Progress */}
-      <VStack space={4} px={6} py={4} bg=\"gray.50\">
-        <HStack justifyContent=\"space-between\" alignItems=\"center\">
-          <Text fontSize=\"lg\" fontWeight=\"bold\">
+      <VStack space={4} px={6} py={4} bg="gray.50">
+        <HStack justifyContent="space-between" alignItems="center">
+          <Text fontSize="lg" fontWeight="bold">
             {isEditing ? 'Edit Business' : 'Create Business'}
           </Text>
-          <Text fontSize=\"sm\" color=\"gray.600\">
+          <Text fontSize="sm" color="gray.600">
             {currentStepIndex + 1} of {totalSteps}
           </Text>
         </HStack>
-        
-        <Progress value={progressValue} colorScheme=\"blue\" />
-        
+
+        <Progress value={progressValue} colorScheme="blue" />
+
         <VStack space={1}>
-          <Text fontSize=\"md\" fontWeight=\"semibold\">
+          <Text fontSize="md" fontWeight="semibold">
             {currentStep.title}
           </Text>
-          <Text fontSize=\"sm\" color=\"gray.600\">
+          <Text fontSize="sm" color="gray.600">
             {currentStep.description}
           </Text>
         </VStack>
@@ -264,17 +235,17 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
       </ScrollView>
 
       {/* Navigation Footer */}
-      <HStack 
-        justifyContent=\"space-between\" 
-        alignItems=\"center\" 
-        px={6} 
-        py={4} 
-        bg=\"gray.50\"
+      <HStack
+        justifyContent="space-between"
+        alignItems="center"
+        px={6}
+        py={4}
+        bg="gray.50"
         borderTopWidth={1}
-        borderTopColor=\"gray.200\"
+        borderTopColor="gray.200"
       >
         <Button
-          variant=\"ghost\"
+          variant="ghost"
           onPress={currentStepIndex === 0 ? onCancel : handlePrevious}
           isDisabled={isLoading || isSubmitting}
         >
@@ -286,16 +257,12 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
             onPress={handleSubmit}
             isLoading={isSubmitting}
             loadingText={isEditing ? 'Updating...' : 'Creating...'}
-            colorScheme=\"blue\"
+            colorScheme="blue"
           >
             {isEditing ? 'Update Business' : 'Create Business'}
           </Button>
         ) : (
-          <Button
-            onPress={handleNext}
-            isDisabled={isLoading}
-            colorScheme=\"blue\"
-          >
+          <Button onPress={handleNext} isDisabled={isLoading} colorScheme="blue">
             Next
           </Button>
         )}
@@ -305,6 +272,6 @@ export const BusinessFormWizard: React.FC<BusinessFormProps> = ({
 };
 
 // Helper function to get nested field values
-function getFieldValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getFieldValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce((current, key) => (current as Record<string, unknown>)?.[key], obj);
 }

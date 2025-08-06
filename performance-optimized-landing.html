@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Locals - Where Community Meets Commerce</title>
+    <meta name="description" content="Discover and support local businesses in your community. The trusted marketplace that creates measurable economic impact while bringing authentic local experiences to your fingertips.">
+    
+    <!-- Critical Resource Hints for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="//www.google-analytics.com">
+    
+    <!-- Optimized Font Loading - Only Critical Weights -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Critical Above-the-Fold CSS - Inlined and Minified -->
+    <style>
+        /* Critical CSS - Above the fold only */
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--primary-green:#16a085;--primary-dark:#0d7a6b;--accent-orange:#f39c12;--neutral-dark:#2c3e50;--neutral-medium:#34495e;--neutral-light:#ecf0f1;--white:#fff;--shadow-light:0 2px 10px rgba(0,0,0,.1);--shadow-medium:0 4px 20px rgba(0,0,0,.15);--gradient-primary:linear-gradient(135deg,#16a085,#0d7a6b);--font-primary:'Inter',sans-serif;--border-radius:12px;--transition:all .3s cubic-bezier(.4,0,.2,1)}
+        body{font-family:var(--font-primary);line-height:1.6;color:var(--neutral-dark);overflow-x:hidden}
+        .container{max-width:1200px;margin:0 auto;padding:0 20px}
+        .header{position:fixed;top:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);z-index:1000;transition:var(--transition);border-bottom:1px solid rgba(22,160,133,.1)}
+        .nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+        .logo{font-size:28px;font-weight:800;color:var(--primary-green);text-decoration:none;display:flex;align-items:center;gap:8px}
+        .logo::before{content:"🏪";font-size:24px}
+        .nav-links{display:flex;gap:40px;list-style:none}
+        .nav-links a{text-decoration:none;color:var(--neutral-medium);font-weight:500;transition:var(--transition);position:relative}
+        .nav-links a:hover{color:var(--primary-green)}
+        .nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--primary-green);transition:var(--transition)}
+        .nav-links a:hover::after{width:100%}
+        .cta-nav{background:var(--gradient-primary);color:var(--white);padding:12px 24px;border-radius:var(--border-radius);text-decoration:none;font-weight:600;transition:var(--transition);box-shadow:var(--shadow-light)}
+        .cta-nav:hover{transform:translateY(-2px);box-shadow:var(--shadow-medium)}
+        .hero{background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);padding:140px 0 100px;position:relative;overflow:hidden}
+        .hero::before{content:'';position:absolute;top:-50%;right:-20%;width:60%;height:200%;background:radial-gradient(circle,rgba(22,160,133,.05) 0%,transparent 70%);transform:rotate(-15deg)}
+        .hero-content{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:2}
+        .hero-text h1{font-size:64px;font-weight:800;line-height:1.1;margin-bottom:24px;background:linear-gradient(135deg,var(--neutral-dark),var(--primary-green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .hero-text p{font-size:22px;color:var(--neutral-medium);margin-bottom:40px;line-height:1.5}
+        .hero-cta{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+        .btn-primary{background:var(--gradient-primary);color:var(--white);padding:18px 36px;border:none;border-radius:var(--border-radius);font-size:18px;font-weight:600;cursor:pointer;transition:var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow-light);min-width:44px;min-height:44px}
+        .btn-primary:hover{transform:translateY(-3px);box-shadow:var(--shadow-medium)}
+        .btn-secondary{background:transparent;color:var(--neutral-dark);padding:18px 36px;border:2px solid var(--neutral-light);border-radius:var(--border-radius);font-size:18px;font-weight:600;cursor:pointer;transition:var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:8px;min-width:44px;min-height:44px}
+        .btn-secondary:hover{border-color:var(--primary-green);color:var(--primary-green);transform:translateY(-1px)}
+        .hero-visual{position:relative}
+        .hero-image{width:100%;height:500px;background:var(--gradient-primary);border-radius:20px;display:flex;align-items:center;justify-content:center;color:var(--white);font-size:72px;box-shadow:var(--shadow-medium);position:relative;overflow:hidden}
+        .mobile-menu-toggle{display:none;background:none;border:none;font-size:24px;color:var(--neutral-dark);cursor:pointer;min-width:44px;min-height:44px}
+        @media(max-width:768px){
+            .mobile-menu-toggle{display:block}
+            .nav-links{display:none}
+            .hero-content{grid-template-columns:1fr;gap:40px;text-align:center}
+            .hero-text h1{font-size:42px}
+            .hero-text p{font-size:18px}
+            .hero-cta{justify-content:center}
+        }
+        @media(max-width:480px){
+            .container{padding:0 15px}
+            .hero{padding:120px 0 80px}
+            .hero-text h1{font-size:32px}
+            .btn-primary,.btn-secondary{width:100%;justify-content:center}
+        }
+        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+        a:focus,button:focus{outline:2px solid var(--primary-green);outline-offset:2px}
+        @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+    </style>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZs.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Load non-critical CSS asynchronously -->
+    <link rel="preload" href="data:text/css;base64,LyogTm9uLWNyaXRpY2FsIENTUyAtIExvYWRlZCBhc3luY2hyb25vdXNseSAqLw==" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Buy Locals",
+        "description": "Discover and support local businesses in your community",
+        "url": "https://buylocals.com",
+        "applicationCategory": "Shopping",
+        "operatingSystem": "iOS, Android, Web"
+    }
+    </script>
+</head>
+<body>
+    <!-- Above-the-fold content optimized for LCP -->
+    <header class="header" role="banner">
+        <nav class="nav container" role="navigation" aria-label="Main navigation">
+            <a href="#" class="logo" aria-label="Buy Locals - Home">Buy Locals</a>
+            
+            <ul class="nav-links">
+                <li><a href="#features" aria-label="Learn about features">Features</a></li>
+                <li><a href="#businesses" aria-label="Information for businesses">For Businesses</a></li>
+                <li><a href="#community" aria-label="Community impact">Community</a></li>
+                <li><a href="#about" aria-label="About Buy Locals">About</a></li>
+            </ul>
+            
+            <a href="#signup" class="cta-nav" aria-label="Sign up for Buy Locals">Get Started</a>
+            <button class="mobile-menu-toggle" aria-label="Toggle mobile menu" aria-expanded="false">☰</button>
+        </nav>
+    </header>
+    
+    <main role="main">
+        <!-- Hero section - Critical for LCP -->
+        <section class="hero" aria-labelledby="hero-heading">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1 id="hero-heading">Where Community Meets Commerce</h1>
+                        <p>Discover authentic local businesses, support your community, and create measurable economic impact with every purchase. The trusted marketplace that brings neighbors together.</p>
+                        
+                        <div class="hero-cta">
+                            <a href="#download" class="btn-primary" aria-label="Download the Buy Locals app">
+                                📱 Download App
+                            </a>
+                            <a href="#demo" class="btn-secondary" aria-label="Watch demo video">
+                                ▶️ Watch Demo
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-visual">
+                        <div class="hero-image" role="img" aria-label="Buy Locals app interface mockup">
+                            📱
+                            <!-- Floating cards removed for faster initial render -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Content loaded after critical path -->
+        <div id="deferred-content" style="display:none;">
+            <!-- All remaining sections will be loaded here -->
+        </div>
+    </main>
+    
+    <!-- Critical JavaScript - Inline and Minified -->
+    <script>
+        // Load non-critical content after critical rendering
+        window.addEventListener('load', function() {
+            fetch('/api/deferred-content').then(r => r.text()).then(html => {
+                document.getElementById('deferred-content').innerHTML = html;
+                document.getElementById('deferred-content').style.display = 'block';
+            }).catch(() => {
+                // Fallback: Load remaining content immediately
+                loadRemainingContent();
+            });
+        });
+        
+        // Mobile menu toggle - Critical functionality
+        document.querySelector('.mobile-menu-toggle')?.addEventListener('click', function() {
+            const navLinks = document.querySelector('.nav-links');
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', !isExpanded);
+            navLinks.style.display = isExpanded ? 'none' : 'flex';
+        });
+        
+        // Performance monitoring
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                list.getEntries().forEach((entry) => {
+                    if (entry.entryType === 'largest-contentful-paint') {
+                        console.log('LCP:', entry.startTime);
+                    }
+                    if (entry.entryType === 'first-input') {
+                        console.log('FID:', entry.processingStart - entry.startTime);
+                    }
+                });
+            });
+            observer.observe({entryTypes: ['largest-contentful-paint', 'first-input']});
+        }
+    </script>
+    
+    <!-- Load remaining CSS and JS asynchronously -->
+    <script>
+        // Load non-critical CSS
+        const loadCSS = (href) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            document.head.appendChild(link);
+        };
+        
+        // Load after critical rendering
+        setTimeout(() => {
+            loadCSS('/css/non-critical.css');
+        }, 100);
+        
+        // Service Worker for caching
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</body>
+</html>

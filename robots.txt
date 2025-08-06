@@ -1,0 +1,43 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Sitemap
+Sitemap: https://buylocals.com/sitemap.xml
+
+# Crawl delay for bots (optional)
+Crawl-delay: 1
+
+# Allow specific important pages
+Allow: /
+Allow: /about
+Allow: /features
+Allow: /early-access
+Allow: /business-owners
+Allow: /community-impact
+
+# Block common bot traps
+Disallow: /search?*
+Disallow: /*?utm_*
+Disallow: /*?ref=*
+Disallow: /*?fbclid=*
+
+# Allow Googlebot more access
+User-agent: Googlebot
+Allow: /
+
+# Allow Bingbot
+User-agent: Bingbot
+Allow: /
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
