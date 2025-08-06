@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { errorHandler, ApiError } from './middleware/errorHandler.js';
+import { ApiError, errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
-import { securityHeaders, sanitizeInput } from './middleware/security.js';
+import { sanitizeInput, securityHeaders } from './middleware/security.js';
 import { validationErrorHandler } from './middleware/validation.js';
 
 // Import route handlers
@@ -14,23 +14,30 @@ import { businessRoutes } from './routes/businessRoutes.js';
 const app = express();
 
 // Security and CORS middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
     },
-  },
-}));
+  })
+);
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000', 'http://localhost:19006'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN?.split(',') || [
+      'http://localhost:3000',
+      'http://localhost:19006',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
+  })
+);
 
 // Request parsing and logging
 app.use(express.json({ limit: '10mb' }));
@@ -47,7 +54,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/businesses', businessRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (req, _res) => {
   const error: ApiError = new Error(`Route ${req.originalUrl} not found`) as ApiError;
   error.statusCode = 404;
   error.isOperational = true;

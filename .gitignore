@@ -147,6 +147,7 @@ cdk.out/
 build/
 dist/
 out/
+apps/api/.build/
 
 # Database
 *.sqlite
