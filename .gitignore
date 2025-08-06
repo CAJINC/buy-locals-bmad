@@ -220,3 +220,12 @@ service-account*.json
 uploads/
 public/uploads/
 static/uploads/
+
+# Turo specific
+.envrc
+.turo/
+.turo-plugins/
+.turo-templates/
+.turo-cache/
+.turo-debug.log
+.turo-*.log

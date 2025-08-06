@@ -1,4 +1,4 @@
-import { User, CreateUserRequest, LoginRequest } from '../user';
+import { CreateUserRequest, LoginRequest, User } from '../user';
 
 describe('User Types', () => {
   it('should have correct User interface structure', () => {
