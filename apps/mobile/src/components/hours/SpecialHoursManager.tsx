@@ -198,7 +198,7 @@ export const SpecialHoursManager: React.FC<SpecialHoursManagerProps> = ({
     if (errors.length > 0) {
       Alert.alert(
         'Validation Errors',
-        'Please fix the following issues:\n\n' + errors.join('\n'),
+        `Please fix the following issues:\n\n${  errors.join('\n')}`,
         [{ text: 'OK' }]
       );
       return;

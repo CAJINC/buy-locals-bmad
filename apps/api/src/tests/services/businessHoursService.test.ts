@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { businessHoursService } from '../../services/businessHoursService';
 import { BaseRepository } from '../../repositories/BaseRepository';
 

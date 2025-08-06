@@ -78,7 +78,7 @@ export const BusinessListExampleScreen: React.FC<BusinessListExampleScreenProps>
     // Navigate to business profile (example)
     navigation.navigate('BusinessProfile', { 
       businessId: business.id,
-      business: business 
+      business 
     });
   }, [navigation]);
 

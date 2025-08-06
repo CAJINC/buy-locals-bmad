@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import request from 'supertest';
 import { pool } from '../../config/database';
 import app from '../../server';

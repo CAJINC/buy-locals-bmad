@@ -1,4 +1,4 @@
-import { redisClient, cacheKeys, redisMetrics, cacheManager } from '../config/redis.js';
+import { cacheKeys, cacheManager, redisClient, redisMetrics } from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 import { performanceMonitoringService } from './performanceMonitoringService.js';
 

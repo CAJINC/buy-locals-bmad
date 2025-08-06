@@ -1,4 +1,4 @@
-import { redisClient, redisMetrics, cacheManager } from '../config/redis.js';
+import { cacheManager, redisClient, redisMetrics } from '../config/redis.js';
 import { pool } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 
@@ -795,7 +795,7 @@ class PerformanceMonitoringService {
           : 0;
         
         hourlyData.push({
-          hour: String(hour.getHours()).padStart(2, '0') + ':00',
+          hour: `${String(hour.getHours()).padStart(2, '0')  }:00`,
           latency: Math.round(averageLatency * 100) / 100,
           volume: latencies.length,
         });

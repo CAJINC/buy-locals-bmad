@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import { businessRoutes } from '../../routes/businessRoutes';
@@ -75,7 +75,7 @@ describe('Business Hours API Routes', () => {
 
     it('should return 404 for non-existent business', async () => {
       (businessHoursService.getBusinessHours as jest.MockedFunction<any>)
-        .mockRejectedValue(new Error('Business not found: ' + mockBusinessId));
+        .mockRejectedValue(new Error(`Business not found: ${  mockBusinessId}`));
       
       const response = await request(app)
         .get(`/api/businesses/${mockBusinessId}/hours`)
@@ -295,7 +295,7 @@ describe('Business Hours API Routes', () => {
 
     it('should return 404 for non-existent business', async () => {
       (businessHoursService.getBusinessStatus as jest.MockedFunction<any>)
-        .mockRejectedValue(new Error('Business not found: ' + mockBusinessId));
+        .mockRejectedValue(new Error(`Business not found: ${  mockBusinessId}`));
       
       const response = await request(app)
         .get(`/api/businesses/${mockBusinessId}/status`)

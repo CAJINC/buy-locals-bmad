@@ -210,7 +210,7 @@ const HistoryItem = React.memo<HistoryItemProps>(
             {/* Actions */}
             <View style={styles.historyActions}>
               {entry.sessionInfo.isRepeatSearch && (
-                <View style={[styles.repeatBadge, { backgroundColor: theme.primaryColor + '20' }]}>
+                <View style={[styles.repeatBadge, { backgroundColor: `${theme.primaryColor  }20` }]}>
                   <Text style={[styles.repeatText, { color: theme.primaryColor }]}>
                     Repeat
                   </Text>
@@ -320,14 +320,14 @@ const RecommendationItem = React.memo<RecommendationItemProps>(
               
               {/* Badges */}
               <View style={styles.recommendationBadges}>
-                <View style={[styles.confidenceBadge, { backgroundColor: getConfidenceColor() + '20' }]}>
+                <View style={[styles.confidenceBadge, { backgroundColor: `${getConfidenceColor()  }20` }]}>
                   <Text style={[styles.confidenceText, { color: getConfidenceColor() }]}>
                     {Math.round(recommendation.confidence * 100)}% match
                   </Text>
                 </View>
                 
                 {recommendation.basedOn.patterns.length > 0 && (
-                  <View style={[styles.patternBadge, { backgroundColor: theme.primaryColor + '20' }]}>
+                  <View style={[styles.patternBadge, { backgroundColor: `${theme.primaryColor  }20` }]}>
                     <Text style={[styles.patternText, { color: theme.primaryColor }]}>
                       Pattern-based
                     </Text>

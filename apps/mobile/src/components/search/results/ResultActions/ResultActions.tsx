@@ -40,7 +40,7 @@ export const ResultActions: React.FC<ResultActionsProps> = ({
       
       const shareOptions = {
         title: subject,
-        message: message,
+        message,
         ...(Platform.OS === 'ios' && { url: result.website }),
       };
 

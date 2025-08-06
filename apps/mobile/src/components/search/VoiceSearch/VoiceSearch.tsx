@@ -396,7 +396,7 @@ export const VoiceSearch: React.FC<VoiceSearchProps> = ({
       
       {/* Voice button */}
       <TouchableOpacity
-        style={[styles.voiceButton]}
+        style={styles.voiceButton}
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.7}

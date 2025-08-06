@@ -204,7 +204,7 @@ class LoadTestingSuite {
     const responseTimes: number[] = [];
     const activeUsers: Set<Promise<void>> = new Set();
     const testStartTime = Date.now();
-    let requestCount = 0;
+    const requestCount = 0;
 
     // Generate test queries
     const testQueries = this.generateTestQueries(geographicDistribution);

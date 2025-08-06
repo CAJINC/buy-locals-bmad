@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import request from 'supertest';
 import { performance } from 'perf_hooks';
 import { pool } from '../../config/database';
@@ -12,7 +12,7 @@ import { businessHoursService } from '../../services/businessHoursService';
  */
 describe('Business Hours Performance Tests', () => {
   let testBusinessIds: string[] = [];
-  let testData: any[] = [];
+  const testData: any[] = [];
 
   beforeAll(async () => {
     // Create performance test dataset

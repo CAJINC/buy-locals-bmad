@@ -189,7 +189,7 @@ export const BusinessHoursEditor: React.FC<BusinessHoursEditorProps> = ({
     if (errors.length > 0) {
       Alert.alert(
         'Validation Error',
-        'Please fix the following issues:\n' + errors.join('\n'),
+        `Please fix the following issues:\n${  errors.join('\n')}`,
         [{ text: 'OK' }]
       );
       return;

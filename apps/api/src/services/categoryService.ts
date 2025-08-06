@@ -1,16 +1,16 @@
 import { BaseRepository } from '../repositories/BaseRepository.js';
-import { redisClient, cacheKeys, redisMetrics } from '../config/redis.js';
+import { cacheKeys, redisClient, redisMetrics } from '../config/redis.js';
 import { 
-  getAllCategories, 
-  getAllSubcategories, 
+  BUSINESS_CATEGORY_OPTIONS, 
+  BusinessCategory, 
+  CategoryFilter,
+  CategoryMetadata,
+  expandCategoryFilter,
+  getAllCategories,
+  getAllSubcategories,
   getCategoryMetadata,
   getCategorySubcategories,
-  getParentCategory,
-  BUSINESS_CATEGORY_OPTIONS,
-  CategoryMetadata,
-  BusinessCategory,
-  expandCategoryFilter,
-  CategoryFilter
+  getParentCategory
 } from '../constants/businessCategories.js';
 import { logger } from '../utils/logger.js';
 

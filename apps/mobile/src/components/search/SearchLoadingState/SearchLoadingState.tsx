@@ -317,7 +317,7 @@ export const SearchLoadingState: React.FC<SearchLoadingStateProps> = ({
           <Animated.View
             style={[styles.progressContainer, progressContainerAnimatedStyle]}
           >
-            <View style={[styles.progressTrack, { backgroundColor: theme.placeholderColor + '30' }]}>
+            <View style={[styles.progressTrack, { backgroundColor: `${theme.placeholderColor  }30` }]}>
               <Animated.View
                 style={[
                   styles.progressBar,

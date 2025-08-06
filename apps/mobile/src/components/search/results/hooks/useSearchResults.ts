@@ -81,8 +81,8 @@ export const useSearchResults = ({
     isLoadingMore: false,
     isRefreshing: false,
     lastUpdated: new Date(),
-    searchQuery: searchQuery,
-    filters: filters,
+    searchQuery,
+    filters,
     bookmarkedResults: new Set()
   });
 
@@ -201,7 +201,7 @@ export const useSearchResults = ({
       totalResults: processedResults.length,
       currentPage: 0,
       lastUpdated: new Date(),
-      hasNextPage: hasNextPage
+      hasNextPage
     }));
   }, [searchQuery, bookmarkedIds, hasNextPage]);
 

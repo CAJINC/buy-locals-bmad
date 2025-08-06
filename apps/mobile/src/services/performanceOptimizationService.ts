@@ -339,12 +339,13 @@ export class PerformanceOptimizationService {
       case 'realTimeUpdate':
         this.metrics.realTimeUpdateLatency = duration;
         break;
-      case 'cacheHit':
+      case 'cacheHit': {
         // Calculate cache hit rate
         const totalRequests = (this.metrics.cacheHitRate * 100) + 1;
         const hits = (this.metrics.cacheHitRate * (totalRequests - 1)) + 1;
         this.metrics.cacheHitRate = hits / totalRequests;
         break;
+      }
     }
   }
 

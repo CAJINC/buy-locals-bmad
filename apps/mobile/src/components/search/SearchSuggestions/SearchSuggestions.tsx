@@ -123,7 +123,7 @@ const SuggestionItem = React.memo<SuggestionItemProps>(
               key={i}
               style={
                 part.toLowerCase() === searchQuery.toLowerCase()
-                  ? [styles.highlightedText, { backgroundColor: theme.primaryColor + '20', color: theme.primaryColor }]
+                  ? [styles.highlightedText, { backgroundColor: `${theme.primaryColor  }20`, color: theme.primaryColor }]
                   : undefined
               }
             >

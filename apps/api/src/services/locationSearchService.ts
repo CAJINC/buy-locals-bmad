@@ -1,4 +1,4 @@
-import { redisClient, cacheKeys, redisMetrics } from '../config/redis.js';
+import { cacheKeys, redisClient, redisMetrics } from '../config/redis.js';
 import { BaseRepository } from '../repositories/BaseRepository.js';
 import { Business } from '../types/Business.js';
 import { expandCategoryFilter } from '../constants/businessCategories.js';
@@ -955,11 +955,11 @@ export class LocationSearchService extends BaseRepository<Business> {
     // Dynamic ORDER BY clause
     let orderBy = 'b.location_point <-> ST_SetSRID(ST_MakePoint($2, $1), 4326)';
     if (sortBy === 'rating') {
-      orderBy = '(SELECT AVG(r.rating) FROM reviews r WHERE r.business_id = b.id) DESC NULLS LAST, ' + orderBy;
+      orderBy = `(SELECT AVG(r.rating) FROM reviews r WHERE r.business_id = b.id) DESC NULLS LAST, ${  orderBy}`;
     } else if (sortBy === 'newest') {
-      orderBy = 'b.created_at DESC, ' + orderBy;
+      orderBy = `b.created_at DESC, ${  orderBy}`;
     } else if (sortBy === 'popular') {
-      orderBy = '(SELECT COUNT(*) FROM reviews r WHERE r.business_id = b.id) DESC, ' + orderBy;
+      orderBy = `(SELECT COUNT(*) FROM reviews r WHERE r.business_id = b.id) DESC, ${  orderBy}`;
     }
 
     const advancedSearchSql = `

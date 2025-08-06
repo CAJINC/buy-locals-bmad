@@ -473,7 +473,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
                 },
                 textInput: {
                   backgroundColor: bgColor,
-                  borderColor: borderColor,
+                  borderColor,
                   borderWidth: 1,
                   borderRadius: 8,
                   color: textColor,
@@ -484,7 +484,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
                   left: 0,
                   right: 0,
                   backgroundColor: bgColor,
-                  borderColor: borderColor,
+                  borderColor,
                   borderWidth: 1,
                   borderTopWidth: 0,
                   borderBottomLeftRadius: 8,

@@ -291,7 +291,7 @@ class EnhancedLocationSearchService {
           apiLatency: executionTime,
           resultsCount: businessResults.length,
           searchComplexity: this.getSearchComplexity(query),
-          endpoint: endpoint,
+          endpoint,
           isOpenNowSearch: isOpenNowFilter,
         },
       };

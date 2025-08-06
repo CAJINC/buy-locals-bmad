@@ -1,4 +1,4 @@
-import { redisClient, cacheKeys, redisMetrics } from '../config/redis.js';
+import { cacheKeys, redisClient, redisMetrics } from '../config/redis.js';
 import { BaseRepository } from '../repositories/BaseRepository.js';
 
 // Analytics types for comprehensive tracking

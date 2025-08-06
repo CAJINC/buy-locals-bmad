@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { rateLimitMiddleware } from '../middleware/rateLimitMiddleware.js';
 import { searchSuggestionService } from '../services/searchSuggestionService.js';

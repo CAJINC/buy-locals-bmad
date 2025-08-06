@@ -6,22 +6,22 @@ import { authMiddleware, requireBusinessOwner, requireRole } from '../middleware
 import { performanceMonitoring } from '../middleware/performanceMonitoring.js';
 import { locationSecurityMiddleware } from '../middleware/locationSecurity.js';
 import {
-  businessMediaUploadSchema,
-  businessSearchSchema,
-  createBusinessSchema,
-  updateBusinessSchema,
-  advancedLocationSearchSchema,
-  businessDensitySchema,
-  cacheInvalidationSchema,
-  categoryQuerySchema,
-  categoryAnalyticsSchema,
-  categoryInteractionSchema,
-  trendingCategoriesSchema,
-  advancedFilterSchema,
-  filterPresetSchema,
   LocationSearchError,
   LocationSearchErrorType,
+  advancedFilterSchema,
+  advancedLocationSearchSchema,
+  businessDensitySchema,
+  businessMediaUploadSchema,
+  businessSearchSchema,
+  cacheInvalidationSchema,
+  categoryAnalyticsSchema,
+  categoryInteractionSchema,
+  categoryQuerySchema,
+  createBusinessSchema,
+  filterPresetSchema,
   performanceThresholds,
+  trendingCategoriesSchema,
+  updateBusinessSchema,
 } from '../schemas/businessSchemas.js';
 import Joi from 'joi';
 import { errorResponse, paginatedResponse, successResponse } from '../utils/responseUtils.js';
@@ -34,8 +34,8 @@ import { locationSearchService } from '../services/locationSearchService.js';
 import { categoryService } from '../services/categoryService.js';
 import { filterStateService } from '../services/filterStateService.js';
 import { 
-  getCategoryMetadata, 
-  BUSINESS_CATEGORY_OPTIONS 
+  BUSINESS_CATEGORY_OPTIONS, 
+  getCategoryMetadata 
 } from '../constants/businessCategories.js';
 import { NextFunction, Request, Response } from 'express';
 
@@ -1072,7 +1072,7 @@ router.post('/search/filters/apply-preset/:presetId', async (req: Request, res: 
     
     // Get preset (first check defaults, then user presets)
     const defaultPresets = filterStateService.getDefaultPresets();
-    let preset = defaultPresets.find(p => p.id === presetId);
+    const preset = defaultPresets.find(p => p.id === presetId);
     
     // TODO: Check user custom presets from database
     if (!preset) {

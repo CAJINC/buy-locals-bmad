@@ -1,4 +1,4 @@
-import { redisClient, cacheKeys, redisMetrics } from '../config/redis.js';
+import { cacheKeys, redisClient, redisMetrics } from '../config/redis.js';
 import { BaseRepository } from '../repositories/BaseRepository.js';
 import { Business } from '../types/Business.js';
 import { categoryService } from './categoryService.js';
@@ -284,7 +284,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
           payload: { 
             query: row.name, 
             businessId: row.id,
-            location: location 
+            location 
           }
         },
         analytics: {
@@ -334,7 +334,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
         displayText: cat.category,
         description: `${cat.count} businesses in area (${cat.percentage.toFixed(1)}%)`,
         category: cat.category,
-        location: location,
+        location,
         metadata: {
           frequency: cat.count,
           relevanceScore: cat.percentage / 100,
@@ -347,8 +347,8 @@ export class SearchSuggestionService extends BaseRepository<Business> {
           type: 'filter',
           payload: { 
             category: cat.category, 
-            location: location,
-            radius: radius 
+            location,
+            radius 
           }
         },
         analytics: {
@@ -405,7 +405,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
               type: 'search',
               payload: { 
                 query: trending.query,
-                location: location 
+                location 
               }
             },
             analytics: {
@@ -452,7 +452,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
           type: 'search',
           payload: { 
             query: trending.query,
-            location: location 
+            location 
           }
         },
         analytics: {
@@ -494,7 +494,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
             displayText: `⭐ ${popular.query}`,
             description: `Popular search (${popular.frequency} times, ${popular.averageRating.toFixed(1)}★ avg)`,
             category: popular.categories[0],
-            location: location,
+            location,
             metadata: {
               frequency: popular.frequency,
               relevanceScore: Math.min(1.0, popular.frequency / 100),
@@ -507,7 +507,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
               type: 'search',
               payload: { 
                 query: popular.query,
-                location: location 
+                location 
               }
             },
             analytics: {
@@ -541,7 +541,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
         displayText: `⭐ ${popular.query}`,
         description: `Popular search (${popular.frequency} times, ${popular.averageRating.toFixed(1)}★ avg)`,
         category: popular.categories[0],
-        location: location,
+        location,
         metadata: {
           frequency: popular.frequency,
           relevanceScore: Math.min(1.0, popular.frequency / 100),
@@ -554,7 +554,7 @@ export class SearchSuggestionService extends BaseRepository<Business> {
           type: 'search',
           payload: { 
             query: popular.query,
-            location: location 
+            location 
           }
         },
         analytics: {

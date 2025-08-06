@@ -1,9 +1,9 @@
-import { describe, beforeAll, afterAll, beforeEach, afterEach, it, expect } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app';
 import { BusinessRepository } from '../../repositories/businessRepository';
 import { DatabasePool } from '../../config/database';
-import { filterStateService, AdvancedFilters } from '../../services/filterStateService';
+import { AdvancedFilters, filterStateService } from '../../services/filterStateService';
 
 /**
  * Comprehensive Advanced Filtering Integration Tests
