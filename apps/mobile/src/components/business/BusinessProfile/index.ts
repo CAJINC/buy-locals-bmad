@@ -54,4 +54,14 @@ export type {
   ServiceItemProps,
   ServiceSearchProps,
   ServiceFilters,
+  // New enhancement types
+  LocationMapProps,
+  ContactMethod,
+  ContactMethodsProps,
+  OptimizedImageProps,
+  ResponsiveBreakpoints,
+  Breakpoint,
+  DeviceType,
+  Orientation,
+  ResponsiveDesignHook,
 } from './types';
