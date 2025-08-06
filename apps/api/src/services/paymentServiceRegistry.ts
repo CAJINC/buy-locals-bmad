@@ -2,16 +2,16 @@ import { PaymentService } from './paymentService.js';
 import { TaxService } from './taxService.js';
 import { PayoutService } from './payoutService.js';
 import { logger } from '../utils/logger.js';
-import { 
+import {
   PCIComplianceHelper,
   SecurityConfig,
   createSecurityMiddleware,
-  defaultSecurityConfig
+  defaultSecurityConfig,
 } from '../utils/paymentSecurity.js';
 
 /**
  * Payment Service Registry
- * 
+ *
  * Central registry for all payment-related services with:
  * - Service lifecycle management
  * - Health monitoring and circuit breakers
@@ -39,16 +39,16 @@ export interface ServiceMetrics {
 }
 
 export class PaymentServiceRegistry {
-  private services: Map<string, any> = new Map();
+  private services: Map<string, unknown> = new Map();
   private healthStatus: Map<string, ServiceHealth> = new Map();
   private metrics: Map<string, ServiceMetrics> = new Map();
-  private securityMiddleware: any;
+  private securityMiddleware: unknown;
   private initialized = false;
 
   constructor(private config: Partial<SecurityConfig> = {}) {
-    this.securityMiddleware = createSecurityMiddleware({ 
-      ...defaultSecurityConfig, 
-      ...this.config 
+    this.securityMiddleware = createSecurityMiddleware({
+      ...defaultSecurityConfig,
+      ...this.config,
     });
   }
 
@@ -80,9 +80,8 @@ export class PaymentServiceRegistry {
 
       logger.info('Payment service registry initialized successfully', {
         services: Array.from(this.services.keys()),
-        securityCompliant: true
+        securityCompliant: true,
       });
-
     } catch (error) {
       logger.error('Failed to initialize payment service registry', { error });
       throw error;
@@ -180,7 +179,7 @@ export class PaymentServiceRegistry {
    * Perform health check on all services
    */
   async performHealthCheck(): Promise<Record<string, ServiceHealth>> {
-    const healthChecks = Array.from(this.services.keys()).map(async (serviceName) => {
+    const healthChecks = Array.from(this.services.keys()).map(async serviceName => {
       const startTime = Date.now();
       let status: ServiceHealth['status'] = 'healthy';
       let dependencies: Record<string, 'healthy' | 'unhealthy'> = {};
@@ -188,16 +187,15 @@ export class PaymentServiceRegistry {
       try {
         // Perform service-specific health check
         await this.checkServiceHealth(serviceName);
-        
+
         // Check dependencies
         dependencies = await this.checkServiceDependencies(serviceName);
-        
+
         // Determine overall status
         const unhealthyDeps = Object.values(dependencies).filter(s => s === 'unhealthy').length;
         if (unhealthyDeps > 0) {
           status = 'degraded';
         }
-
       } catch (error) {
         logger.error(`Health check failed for ${serviceName}`, { error });
         status = 'unhealthy';
@@ -211,7 +209,7 @@ export class PaymentServiceRegistry {
         responseTime,
         errorRate: this.calculateErrorRate(serviceName),
         uptime: this.calculateUptime(serviceName),
-        dependencies
+        dependencies,
       };
 
       this.healthStatus.set(serviceName, health);
@@ -256,10 +254,10 @@ export class PaymentServiceRegistry {
 
   private async validateSecurityCompliance(): Promise<void> {
     const compliance = PCIComplianceHelper.validatePCICompliance();
-    
+
     if (!compliance.compliant) {
       logger.error('PCI DSS compliance validation failed', { issues: compliance.issues });
-      
+
       if (process.env.NODE_ENV === 'production') {
         throw new Error(`PCI DSS compliance issues: ${compliance.issues.join(', ')}`);
       } else {
@@ -274,23 +272,23 @@ export class PaymentServiceRegistry {
     const serviceConfigs = [
       { name: 'payment', class: PaymentService },
       { name: 'tax', class: TaxService },
-      { name: 'payout', class: PayoutService }
+      { name: 'payout', class: PayoutService },
     ];
 
     for (const serviceConfig of serviceConfigs) {
       try {
         logger.info(`Initializing ${serviceConfig.name} service`);
-        
+
         const service = new serviceConfig.class();
         this.services.set(serviceConfig.name, service);
-        
+
         // Initialize service metrics
         this.metrics.set(serviceConfig.name, {
           requestCount: 0,
           errorCount: 0,
           averageResponseTime: 0,
           successRate: 1.0,
-          lastReset: new Date()
+          lastReset: new Date(),
         });
 
         // Perform initial health check
@@ -301,12 +299,11 @@ export class PaymentServiceRegistry {
           responseTime: 0,
           errorRate: 0,
           uptime: 1.0,
-          dependencies: {}
+          dependencies: {},
         };
         this.healthStatus.set(serviceConfig.name, health);
 
         logger.info(`${serviceConfig.name} service initialized successfully`);
-
       } catch (error) {
         logger.error(`Failed to initialize ${serviceConfig.name} service`, { error });
         throw error;
@@ -332,9 +329,12 @@ export class PaymentServiceRegistry {
 
   private startMetricsCollection(): void {
     // Reset metrics every hour
-    setInterval(() => {
-      this.resetMetrics();
-    }, 60 * 60 * 1000);
+    setInterval(
+      () => {
+        this.resetMetrics();
+      },
+      60 * 60 * 1000
+    );
 
     logger.info('Metrics collection started');
   }
@@ -366,7 +366,9 @@ export class PaymentServiceRegistry {
     }
   }
 
-  private async checkServiceDependencies(serviceName: string): Promise<Record<string, 'healthy' | 'unhealthy'>> {
+  private async checkServiceDependencies(
+    serviceName: string
+  ): Promise<Record<string, 'healthy' | 'unhealthy'>> {
     const dependencies: Record<string, 'healthy' | 'unhealthy'> = {};
 
     // All services depend on Stripe
@@ -408,8 +410,8 @@ export class PaymentServiceRegistry {
           city: 'Test',
           state: 'CA',
           postalCode: '12345',
-          country: 'US'
-        }
+          country: 'US',
+        },
       });
     }
   }
@@ -477,17 +479,17 @@ export class PaymentServiceRegistry {
     const now = Date.now();
     const startTime = metrics.lastReset.getTime();
     const totalTime = now - startTime;
-    
+
     if (totalTime === 0) {
       return 1.0;
     }
 
     // Simple uptime calculation - in production, you'd track actual downtime
-    return Math.max(0, 1 - (this.calculateErrorRate(serviceName) * 0.1));
+    return Math.max(0, 1 - this.calculateErrorRate(serviceName) * 0.1);
   }
 
   private resetMetrics(): void {
-    for (const [serviceName, metrics] of this.metrics.entries()) {
+    for (const [, metrics] of this.metrics.entries()) {
       metrics.requestCount = 0;
       metrics.errorCount = 0;
       metrics.averageResponseTime = 0;
