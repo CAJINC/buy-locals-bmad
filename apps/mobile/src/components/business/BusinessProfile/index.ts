@@ -13,6 +13,28 @@ export { ServicesCatalog } from './ServicesCatalog';
 export { ServiceItem } from './ServiceItem';
 export { ServiceSearch } from './ServiceSearch';
 
+// New enhanced components
+export { LocationMap } from './LocationMap';
+export { ContactMethods } from './ContactMethods';
+export { OptimizedImage, BusinessLogoImage, BusinessPhotoImage, ThumbnailImage } from './OptimizedImage';
+
+// Hooks and utilities
+export { useResponsiveDesign, useResponsiveStyles, useResponsiveGrid } from './hooks/useResponsiveDesign';
+export { 
+  ImageOptimizer, 
+  LazyLoader, 
+  PerformanceMonitor, 
+  MemoryManager,
+  BundleOptimizer,
+  NetworkOptimizer,
+  DeviceCapabilities 
+} from './utils/performanceUtils';
+export { 
+  AccessibilityHelper, 
+  ScreenReaderOptimizer, 
+  KeyboardNavigation 
+} from './utils/accessibilityUtils';
+
 export type {
   BusinessProfileProps,
   BusinessCardProps,

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -35,6 +35,14 @@ import { ExpandableText } from './ExpandableText';
 import { ServicesCatalog } from './ServicesCatalog';
 import { EnhancedService } from './types';
 
+// New enhanced components
+import { LocationMap } from './LocationMap';
+import { ContactMethods } from './ContactMethods';
+import { OptimizedImage } from './OptimizedImage';
+import { useResponsiveStyles } from './hooks/useResponsiveDesign';
+import { AccessibilityHelper, ScreenReaderOptimizer } from './utils/accessibilityUtils';
+import { PerformanceMonitor, ImageOptimizer } from './utils/performanceUtils';
+
 export const BusinessProfile: React.FC<BusinessProfileProps> = React.memo(({
   business,
   showActions = true,
@@ -49,6 +57,39 @@ export const BusinessProfile: React.FC<BusinessProfileProps> = React.memo(({
 }) => {
   const toast = useToast();
   const [refreshing, setRefreshing] = useState(false);
+  const { responsive, styles } = useResponsiveStyles();
+
+  // Performance monitoring
+  useEffect(() => {
+    if (business) {
+      PerformanceMonitor.startMeasure('business_profile_render');
+      return () => {
+        PerformanceMonitor.endMeasure('business_profile_render');
+      };
+    }
+  }, [business]);
+
+  // Initialize accessibility
+  useEffect(() => {
+    AccessibilityHelper.initialize();
+    return () => {
+      AccessibilityHelper.cleanup();
+    };
+  }, []);
+
+  // Preload images for better performance
+  useEffect(() => {
+    if (business?.media) {
+      const imageUrls = business.media
+        .filter(m => m.type === 'photo')
+        .slice(0, 3) // Preload first 3 images
+        .map(m => m.url);
+      
+      if (imageUrls.length > 0) {
+        ImageOptimizer.preloadImages(imageUrls);
+      }
+    }
+  }, [business?.media]);
 
   // Memoized computed values for performance
   const logoImage = useMemo(() => 
@@ -216,14 +257,17 @@ export const BusinessProfile: React.FC<BusinessProfileProps> = React.memo(({
   return (
     <ScrollView 
       flex={1} 
-      bg="white"
+      bg={responsive.isDark ? 'gray.900' : 'white'}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         ) : undefined
       }
+      accessible={true}
+      accessibilityLabel={`Business profile for ${business?.name || 'Unknown business'}`}
+      accessibilityHint="Scroll to view business information"
     >
-      <VStack space={6} p={4}>
+      <VStack space={responsive.getSpacing(24)} p={responsive.getSpacing(16)}>
         {/* Enhanced Business Header */}
         <BusinessHeader
           business={{
@@ -293,68 +337,46 @@ export const BusinessProfile: React.FC<BusinessProfileProps> = React.memo(({
 
         <Divider />
 
-        {/* Enhanced Contact Information */}
-        <VStack space={4}>
-          <Heading size="md" color="gray.800">
-            Contact Information
+        {/* Enhanced Contact Methods */}
+        <VStack space={responsive.getSpacing(16)}>
+          <Heading 
+            size={responsive.isPhone ? 'md' : 'lg'} 
+            color={responsive.isDark ? 'white' : 'gray.800'}
+            accessibilityRole="header"
+          >
+            Contact & Location
           </Heading>
           
-          {/* Enhanced Contact Details */}
-          <VStack space={4}>
-            <BusinessContactInfo
-              contact={business.contact}
-              onCall={onCall}
-              onWebsite={onWebsite}
-            />
-            
-            {/* Enhanced Address Display */}
-            <Pressable onPress={handleGetDirections}>
-              <Box p={4} bg="gray.50" borderRadius="lg" borderWidth={1} borderColor="gray.200">
-                <HStack space={3} alignItems="flex-start">
-                  <Icon
-                    as={MaterialIcons}
-                    name="location-on"
-                    size="md"
-                    color="blue.500"
-                    mt={0.5}
-                  />
-                  <VStack flex={1} space={1}>
-                    <Text fontWeight="medium" color="gray.800" fontSize="md">
-                      Address
-                    </Text>
-                    <Text color="gray.800" fontSize="md">
-                      {business.location.address}
-                    </Text>
-                    <Text color="gray.600" fontSize="sm">
-                      {business.location.city}, {business.location.state} {business.location.zipCode}
-                    </Text>
-                    <Text color="blue.600" fontSize="sm" fontWeight="medium" mt={1}>
-                      Tap for directions
-                    </Text>
-                  </VStack>
-                  <Icon
-                    as={MaterialIcons}
-                    name="chevron-right"
-                    size="md"
-                    color="gray.400"
-                  />
-                </HStack>
-              </Box>
-            </Pressable>
-            
-            {/* Social Media Links */}
-            {business.contact.socialMedia && business.contact.socialMedia.length > 0 && (
-              <VStack space={3}>
-                <Heading size="sm" color="gray.800">
-                  Follow Us
-                </Heading>
-                <BusinessSocialMedia
-                  socialMedia={business.contact.socialMedia}
-                  compact={false}
-                />
-              </VStack>
-            )}
-          </VStack>
+          {/* Contact Methods Component */}
+          <ContactMethods
+            business={business}
+            variant={responsive.isPhone ? 'full' : 'grid'}
+            showResponseTimes={true}
+            showAvailabilityStatus={true}
+            showPreferredIndicator={true}
+            onContactMethodPress={(method) => {
+              AccessibilityHelper.announce(`Opening ${method.label}`);
+            }}
+          />
+          
+          <Divider />
+          
+          {/* Location Map Integration */}
+          <LocationMap
+            business={business}
+            mapHeight={responsive.getValue({
+              xs: 180,
+              sm: 200,
+              md: 220,
+              lg: 250,
+              xl: 280,
+            }) || 200}
+            showDirectionsButton={true}
+            showAddressCopy={true}
+            showParkingInfo={true}
+            showAccessibilityInfo={true}
+            onDirectionsPress={onGetDirections}
+          />
         </VStack>
 
         <Divider />
@@ -370,15 +392,34 @@ export const BusinessProfile: React.FC<BusinessProfileProps> = React.memo(({
           />
         </VStack>
 
-        {/* Photo Gallery */}
+        {/* Enhanced Photo Gallery */}
         {photos.length > 0 && (
           <>
             <Divider />
-            <VStack space={3}>
-              <Heading size="md" color="gray.800">
-                Photos
+            <VStack space={responsive.getSpacing(12)}>
+              <Heading 
+                size={responsive.isPhone ? 'md' : 'lg'} 
+                color={responsive.isDark ? 'white' : 'gray.800'}
+                accessibilityRole="header"
+              >
+                Photos ({photos.length})
               </Heading>
-              <BusinessPhotoGallery media={photos} />
+              <BusinessPhotoGallery 
+                media={photos} 
+                lazyLoadingEnabled={true}
+                enableZoom={!responsive.isReducedMotion}
+                enableGestures={!responsive.isReducedMotion}
+                cacheEnabled={true}
+                preloadCount={responsive.isHighPerformance ? 5 : 3}
+                onImagePress={(imageUrl, index) => {
+                  const photo = photos[index];
+                  const accessibilityLabel = AccessibilityHelper.getPhotoGalleryAccessibilityLabel(
+                    photos,
+                    index
+                  );
+                  AccessibilityHelper.announce(accessibilityLabel);
+                }}
+              />
             </VStack>
           </>
         )}

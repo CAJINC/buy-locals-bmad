@@ -275,3 +275,103 @@ export interface ServiceFilters {
   sortBy: 'name' | 'price' | 'duration' | 'category';
   sortOrder: 'asc' | 'desc';
 }
+
+// New component types for Story 2.1 enhancements
+
+export interface LocationMapProps {
+  business: Business;
+  showDirectionsButton?: boolean;
+  showAddressCopy?: boolean;
+  showParkingInfo?: boolean;
+  showAccessibilityInfo?: boolean;
+  mapHeight?: number;
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  customMarkerColor?: string;
+  onDirectionsPress?: (address: string) => void;
+  onMapPress?: (coordinate: { latitude: number; longitude: number }) => void;
+}
+
+export interface ContactMethod {
+  type: 'phone' | 'email' | 'website' | 'social';
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
+  available: boolean;
+  responseTime?: string;
+  preferred?: boolean;
+  platform?: string; // For social media
+}
+
+export interface ContactMethodsProps {
+  business: Business;
+  showResponseTimes?: boolean;
+  showAvailabilityStatus?: boolean;
+  showPreferredIndicator?: boolean;
+  variant?: 'compact' | 'full' | 'grid';
+  enablePhoneCall?: boolean;
+  enableEmailCompose?: boolean;
+  enableWebsiteBrowsing?: boolean;
+  onContactMethodPress?: (method: ContactMethod) => void;
+}
+
+export interface OptimizedImageProps {
+  source: { uri: string } | number;
+  width?: number | string;
+  height?: number | string;
+  resizeMode?: any; // FastImage.ResizeMode
+  borderRadius?: number;
+  alt?: string;
+  placeholder?: string;
+  fallbackIcon?: string;
+  lazyLoad?: boolean;
+  preload?: boolean;
+  cache?: 'immutable' | 'web' | 'cacheOnly';
+  quality?: number;
+  onLoad?: () => void;
+  onError?: (error: any) => void;
+  onPress?: () => void;
+  testID?: string;
+  accessible?: boolean;
+  accessibilityRole?: 'image' | 'button';
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  style?: any;
+  containerStyle?: any;
+}
+
+export interface ResponsiveBreakpoints {
+  xs: number;
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
+}
+
+export type Breakpoint = keyof ResponsiveBreakpoints;
+export type DeviceType = 'phone' | 'tablet' | 'desktop';
+export type Orientation = 'portrait' | 'landscape';
+
+export interface ResponsiveDesignHook {
+  width: number;
+  height: number;
+  deviceType: DeviceType;
+  orientation: Orientation;
+  isTablet: boolean;
+  isPhone: boolean;
+  currentBreakpoint: Breakpoint;
+  isBreakpoint: (breakpoint: Breakpoint) => boolean;
+  isBreakpointUp: (breakpoint: Breakpoint) => boolean;
+  isBreakpointDown: (breakpoint: Breakpoint) => boolean;
+  getValue: <T>(values: Partial<Record<Breakpoint, T>>) => T | undefined;
+  isHighPerformance: boolean;
+  isReducedMotion: boolean;
+  isScreenReaderActive: boolean;
+  colorMode: 'light' | 'dark';
+  isDark: boolean;
+  toggleColorMode: () => void;
+  getSpacing: (base: number) => number;
+  getFontSize: (base: number) => number;
+  getIconSize: (base: number) => number;
+}
