@@ -120,6 +120,7 @@ const BusinessListItemComponent: React.FC<BusinessListItemProps> = ({
         {/* Footer Row */}
         <View style={styles.footerRow}>
           <BusinessHoursIndicator
+            businessId={business.id}
             hours={business.hours}
             isOpen={business.isCurrentlyOpen}
             status={business.status}
@@ -128,6 +129,7 @@ const BusinessListItemComponent: React.FC<BusinessListItemProps> = ({
             size="small"
             showText={true}
             showNextChange={true}
+            enableRealTime={true}
             testID={`${testID}-hours`}
           />
 

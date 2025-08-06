@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { redisClient, redisMetrics } from '../config/redis.js';
+import { redisClient } from '../config/redis.js';
 import { performanceMonitoringService } from '../services/performanceMonitoringService.js';
 import { logger } from '../utils/logger.js';
 

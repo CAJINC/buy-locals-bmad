@@ -1,342 +1,451 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
   StatusBar,
-  Dimensions,
-  BackHandler,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useColorMode, Box } from 'native-base';
-import { useFocusEffect } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+import { BusinessSearchResult } from '../services/enhancedLocationSearchService';
+import { BusinessListView } from '../components/discovery/BusinessListView';
+import { HoursBasedRecommendations } from '../components/search/HoursBasedRecommendations';
+import { SearchFiltersBar, SearchFilter } from '../components/search/SearchFiltersBar';
+import { LocationService } from '../services/locationService';
+import { SearchService } from '../services/searchService';
+import { NotificationService } from '../services/notificationService';
 
-import {
-  SearchBar,
-  SearchHistory,
-  SearchLoadingState,
-} from '../components/search';
-import { SearchSuggestion } from '../services/suggestionService';
-import { SearchRecommendation } from '../services/searchHistoryService';
-import { LocationCoordinates } from '../services/locationService';
-import { createSuggestionService } from '../services/suggestionService';
-import { apiService } from '../services/apiService';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-export interface ComprehensiveSearchScreenProps {
-  navigation: any;
-  route: any;
+interface ComprehensiveSearchScreenProps {
+  route?: {
+    params?: {
+      initialQuery?: string;
+      category?: string;
+      location?: { latitude: number; longitude: number };
+    };
+  };
 }
 
-interface SearchScreenState {
-  query: string;
-  isSearching: boolean;
-  showHistory: boolean;
-  currentLocation: LocationCoordinates | null;
-  searchResults: any[];
-  error: string | null;
-  lastSearchTime: number;
-}
+type SearchMode = 'results' | 'recommendations' | 'filters';
 
 export const ComprehensiveSearchScreen: React.FC<ComprehensiveSearchScreenProps> = ({
-  navigation,
   route,
 }) => {
-  const { colorMode } = useColorMode();
-  
-  // Initialize suggestion service
-  const suggestionService = useMemo(() => {
-    return createSuggestionService(apiService);
-  }, []);
+  const navigation = useNavigation();
+  const { initialQuery, category, location: initialLocation } = route?.params || {};
 
-  // State
-  const [searchState, setSearchState] = useState<SearchScreenState>({
-    query: route.params?.initialQuery || '',
-    isSearching: false,
-    showHistory: true,
-    currentLocation: route.params?.location || null,
-    searchResults: [],
-    error: null,
-    lastSearchTime: 0,
+  // State Management
+  const [searchQuery, setSearchQuery] = useState(initialQuery || '');
+  const [searchMode, setSearchMode] = useState<SearchMode>('results');
+  const [businesses, setBusinesses] = useState<BusinessSearchResult[]>([]);
+  const [filteredBusinesses, setFilteredBusinesses] = useState<BusinessSearchResult[]>([]);
+  const [currentLocation, setCurrentLocation] = useState(initialLocation || null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Services
+  const locationService = new LocationService();
+  const searchService = new SearchService();
+  const notificationService = new NotificationService();
+
+  // Filter State
+  const [searchFilters, setSearchFilters] = useState<SearchFilter[]>([
+    {
+      id: 'category',
+      label: 'Category',
+      icon: 'category',
+      isActive: !!category,
+      type: 'select',
+      options: ['Restaurant', 'Shopping', 'Services', 'Entertainment', 'Health'],
+      value: category,
+    },
+    {
+      id: 'rating',
+      label: 'Rating',
+      icon: 'star',
+      isActive: false,
+      type: 'select',
+      options: ['4+ Stars', '3+ Stars', '2+ Stars'],
+    },
+    {
+      id: 'distance',
+      label: 'Distance',
+      icon: 'location-on',
+      isActive: false,
+      type: 'select',
+      options: ['Within 1 mile', 'Within 5 miles', 'Within 10 miles'],
+    },
+    {
+      id: 'price',
+      label: 'Price',
+      icon: 'attach-money',
+      isActive: false,
+      type: 'select',
+      options: ['$', '$$', '$$$', '$$$$'],
+    },
+    {
+      id: 'verified',
+      label: 'Verified',
+      icon: 'verified',
+      isActive: false,
+      type: 'toggle',
+    },
+  ]);
+
+  const [openNowFilter, setOpenNowFilter] = useState({
+    isActive: false,
+    businessCount: 0,
+    isLoading: false,
+    closingSoonCount: 0,
+    nextOpeningCount: 0,
   });
 
-  // Dynamic theme
-  const theme = useMemo(() => {
-    return {
-      primaryColor: '#007AFF',
-      backgroundColor: colorMode === 'dark' ? '#1A1A1A' : '#FFFFFF',
-      textColor: colorMode === 'dark' ? '#FFFFFF' : '#000000',
-      placeholderColor: colorMode === 'dark' ? '#666666' : '#8E8E93',
-      borderColor: colorMode === 'dark' ? '#333333' : '#E5E5E7',
-      shadowColor: '#000000',
-      surfaceColor: colorMode === 'dark' ? '#2A2A2A' : '#F8F8F8',
-    };
-  }, [colorMode]);
-
-  // Handle back button (Android)
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        if (searchState.showHistory && searchState.query.length === 0) {
-          // If showing history and no query, go back to previous screen
-          navigation.goBack();
-          return true;
-        } else if (!searchState.showHistory || searchState.query.length > 0) {
-          // If showing results or has query, go back to history view
-          setSearchState(prev => ({
-            ...prev,
-            showHistory: true,
-            query: '',
-            searchResults: [],
-            isSearching: false,
-          }));
-          return true;
-        }
-        return false;
-      };
-
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      return () => subscription.remove();
-    }, [navigation, searchState.showHistory, searchState.query])
+  // Computed Values
+  const openBusinesses = useMemo(() => 
+    businesses.filter(business => business.isCurrentlyOpen),
+    [businesses]
   );
 
-  // Handle search execution
-  const performSearch = useCallback(
-    async (query: string, location?: LocationCoordinates) => {
-      if (!query.trim()) {
-        return;
-      }
+  const closingSoonBusinesses = useMemo(() => {
+    const now = new Date();
+    return businesses.filter(business => {
+      if (!business.isCurrentlyOpen || !business.nextChange) return false;
+      const hoursUntilClose = (business.nextChange.getTime() - now.getTime()) / (1000 * 60 * 60);
+      return hoursUntilClose <= 2 && hoursUntilClose > 0;
+    });
+  }, [businesses]);
 
-      setSearchState(prev => ({
-        ...prev,
-        isSearching: true,
-        showHistory: false,
-        error: null,
-        lastSearchTime: Date.now(),
-      }));
+  const nextOpeningBusinesses = useMemo(() => {
+    const now = new Date();
+    return businesses.filter(business => {
+      if (business.isCurrentlyOpen || !business.nextChange) return false;
+      const hoursUntilOpen = (business.nextChange.getTime() - now.getTime()) / (1000 * 60 * 60);
+      return hoursUntilOpen <= 2 && hoursUntilOpen > 0;
+    });
+  }, [businesses]);
 
+  // Initialize location and search
+  useEffect(() => {
+    const initializeSearch = async () => {
       try {
-        // This would be replaced with actual search API call
-        console.log('Performing search:', { query, location });
+        setIsLoading(true);
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Get current location if not provided
+        if (!currentLocation) {
+          const location = await locationService.getCurrentLocation();
+          setCurrentLocation(location);
+        }
         
-        // Mock results - in real implementation, this would be actual search results
-        const mockResults = Array.from({ length: 8 }, (_, i) => ({
-          id: `result-${i}`,
-          name: `Business ${i + 1}`,
-          category: 'Restaurant',
-          rating: 4.0 + Math.random(),
-          distance: Math.random() * 5,
-          address: `${100 + i} Main St, City, State`,
-        }));
-
-        setSearchState(prev => ({
-          ...prev,
-          isSearching: false,
-          searchResults: mockResults,
-          query,
-        }));
-
-        // TODO: Add search to history
-        // await searchHistoryService.addSearchEntry(query, location, region, results);
-
+        // Perform initial search if query provided
+        if (searchQuery) {
+          await performSearch(searchQuery);
+        }
       } catch (error) {
-        console.error('Search error:', error);
-        setSearchState(prev => ({
-          ...prev,
-          isSearching: false,
-          error: error instanceof Error ? error.message : 'Search failed',
-        }));
+        console.error('Failed to initialize search:', error);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    []
-  );
+    };
 
-  // Handle search bar search
-  const handleSearch = useCallback(
-    (query: string) => {
-      performSearch(query, searchState.currentLocation || undefined);
-    },
-    [performSearch, searchState.currentLocation]
-  );
+    initializeSearch();
+  }, []);
 
-  // Handle query change from search bar
-  const handleQueryChange = useCallback(
-    (query: string) => {
-      setSearchState(prev => ({
-        ...prev,
-        query,
-      }));
-    },
-    []
-  );
-
-  // Handle suggestion selection
-  const handleSuggestionSelect = useCallback(
-    (suggestion: SearchSuggestion) => {
-      console.log('Suggestion selected:', suggestion);
-      
-      if (suggestion.action.type === 'search') {
-        performSearch(suggestion.text, searchState.currentLocation || undefined);
-      } else if (suggestion.action.type === 'navigate') {
-        // Handle navigation to location
-        console.log('Navigate to location:', suggestion.action.payload);
-      } else if (suggestion.action.type === 'filter') {
-        // Handle filter application
-        console.log('Apply filter:', suggestion.action.payload);
-      }
-    },
-    [performSearch, searchState.currentLocation]
-  );
-
-  // Handle search bar focus
-  const handleSearchFocus = useCallback(() => {
-    setSearchState(prev => ({
+  // Update filter counts when businesses change
+  useEffect(() => {
+    setOpenNowFilter(prev => ({
       ...prev,
-      showHistory: true,
+      businessCount: openBusinesses.length,
+      closingSoonCount: closingSoonBusinesses.length,
+      nextOpeningCount: nextOpeningBusinesses.length,
+    }));
+  }, [openBusinesses, closingSoonBusinesses, nextOpeningBusinesses]);
+
+  // Apply filters to businesses
+  useEffect(() => {
+    let filtered = [...businesses];
+
+    // Apply Open Now filter
+    if (openNowFilter.isActive) {
+      filtered = filtered.filter(business => business.isCurrentlyOpen);
+    }
+
+    // Apply other filters
+    searchFilters.forEach(filter => {
+      if (!filter.isActive) return;
+
+      switch (filter.id) {
+        case 'category':
+          if (filter.value) {
+            filtered = filtered.filter(business => 
+              business.categories?.some(cat => 
+                cat.toLowerCase().includes(filter.value.toLowerCase())
+              )
+            );
+          }
+          break;
+        case 'rating':
+          if (filter.value) {
+            const minRating = parseFloat(filter.value.charAt(0));
+            filtered = filtered.filter(business => 
+              business.rating && business.rating >= minRating
+            );
+          }
+          break;
+        case 'distance':
+          if (filter.value && currentLocation) {
+            const maxDistance = parseFloat(filter.value.split(' ')[1]);
+            filtered = filtered.filter(business => 
+              business.distance && business.distance <= maxDistance
+            );
+          }
+          break;
+        case 'verified':
+          filtered = filtered.filter(business => business.isVerified);
+          break;
+      }
+    });
+
+    setFilteredBusinesses(filtered);
+  }, [businesses, openNowFilter.isActive, searchFilters, currentLocation]);
+
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim() || !currentLocation) return;
+
+    try {
+      setIsLoading(true);
+      setOpenNowFilter(prev => ({ ...prev, isLoading: true }));
+
+      const results = await searchService.searchBusinesses({
+        query: query.trim(),
+        location: currentLocation,
+        radius: 25000, // 25km
+        includeHours: true,
+        includeRealTimeStatus: true,
+      });
+
+      setBusinesses(results);
+      
+      // Track search analytics
+      await searchService.trackSearchAnalytics({
+        query: query.trim(),
+        location: currentLocation,
+        resultCount: results.length,
+        filtersApplied: searchFilters.filter(f => f.isActive).map(f => f.id),
+        openNowActive: openNowFilter.isActive,
+      });
+
+    } catch (error) {
+      console.error('Search failed:', error);
+      Alert.alert(
+        'Search Error',
+        'Unable to search businesses. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+      setOpenNowFilter(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [currentLocation, searchFilters, openNowFilter.isActive, searchService]);
+
+  const handleSearch = useCallback(() => {
+    if (searchQuery.trim()) {
+      performSearch(searchQuery);
+      setSearchMode('results');
+    }
+  }, [searchQuery, performSearch]);
+
+  const handleRefresh = useCallback(async () => {
+    if (searchQuery.trim()) {
+      setIsRefreshing(true);
+      try {
+        await performSearch(searchQuery);
+      } finally {
+        setIsRefreshing(false);
+      }
+    }
+  }, [searchQuery, performSearch]);
+
+  const handleFilterChange = useCallback((filterId: string, value: any) => {
+    setSearchFilters(prev => prev.map(filter => {
+      if (filter.id === filterId) {
+        return {
+          ...filter,
+          isActive: filter.type === 'toggle' ? value : !!value,
+          value: filter.type === 'toggle' ? undefined : value,
+        };
+      }
+      return filter;
     }));
   }, []);
 
-  // Handle search bar blur
-  const handleSearchBlur = useCallback(() => {
-    // Only hide history if we have search results
-    if (searchState.searchResults.length > 0) {
-      setSearchState(prev => ({
-        ...prev,
-        showHistory: false,
-      }));
+  const handleOpenNowToggle = useCallback((isActive: boolean) => {
+    setOpenNowFilter(prev => ({ ...prev, isActive }));
+  }, []);
+
+  const handleOpenNowRecommendation = useCallback((type: 'closing-soon' | 'next-opening') => {
+    // Apply specific filter based on recommendation type
+    if (type === 'closing-soon') {
+      setFilteredBusinesses(closingSoonBusinesses);
+    } else if (type === 'next-opening') {
+      setFilteredBusinesses(nextOpeningBusinesses);
     }
-  }, [searchState.searchResults.length]);
+    setSearchMode('results');
+  }, [closingSoonBusinesses, nextOpeningBusinesses]);
 
-  // Handle voice search
-  const handleVoiceSearch = useCallback(
-    (query: string) => {
-      console.log('Voice search result:', query);
-      if (query.trim()) {
-        performSearch(query, searchState.currentLocation || undefined);
-      }
-    },
-    [performSearch, searchState.currentLocation]
-  );
+  const handleBusinessPress = useCallback((business: BusinessSearchResult) => {
+    navigation.navigate('BusinessDetail', { businessId: business.id });
+  }, [navigation]);
 
-  // Handle history search selection
-  const handleHistorySearchSelect = useCallback(
-    (query: string, location?: LocationCoordinates) => {
-      const searchLocation = location || searchState.currentLocation || undefined;
-      performSearch(query, searchLocation);
-    },
-    [performSearch, searchState.currentLocation]
-  );
-
-  // Handle recommendation selection
-  const handleRecommendationSelect = useCallback(
-    (recommendation: SearchRecommendation) => {
-      console.log('Recommendation selected:', recommendation);
+  const renderSearchHeader = () => (
+    <View style={styles.searchHeader}>
+      <View style={styles.searchInputContainer}>
+        <Icon name="search" size={24} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search businesses, services, food..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearch}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+          returnKeyType="search"
+          testID="search-input"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setSearchQuery('')}
+            style={styles.clearButton}
+            testID="clear-search"
+          >
+            <Icon name="clear" size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
       
-      if (recommendation.action.type === 'search') {
-        const { query, location } = recommendation.action.payload;
-        performSearch(query, location || searchState.currentLocation || undefined);
-      } else if (recommendation.action.type === 'navigate') {
-        // Handle navigation
-        console.log('Navigate to:', recommendation.action.payload);
-      }
-    },
-    [performSearch, searchState.currentLocation]
+      {searchQuery.trim().length > 0 && (
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={handleSearch}
+          testID="search-button"
+        >
+          <Text style={styles.searchButtonText}>Search</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
-  // Get current screen content
-  const getCurrentContent = () => {
-    if (searchState.isSearching) {
-      return (
-        <SearchLoadingState
-          message="Searching businesses..."
-          submessage="Finding the best matches in your area"
-          theme={theme}
-          style={styles.loadingState}
-        />
-      );
-    }
+  const renderModeSelector = () => (
+    <View style={styles.modeSelectorContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <TouchableOpacity
+          style={[styles.modeButton, searchMode === 'results' && styles.activeModeButton]}
+          onPress={() => setSearchMode('results')}
+          testID="mode-results"
+        >
+          <Icon name="list" size={20} color={searchMode === 'results' ? '#FFF' : '#666'} />
+          <Text style={[styles.modeButtonText, searchMode === 'results' && styles.activeModeButtonText]}>
+            Results ({filteredBusinesses.length})
+          </Text>
+        </TouchableOpacity>
 
-    if (searchState.showHistory) {
-      return (
-        <SearchHistory
-          onSearchSelect={handleHistorySearchSelect}
-          onRecommendationSelect={handleRecommendationSelect}
-          currentLocation={searchState.currentLocation || undefined}
-          showRecommendations={true}
-          theme={theme}
-          style={styles.historyContainer}
-        />
-      );
-    }
+        <TouchableOpacity
+          style={[styles.modeButton, searchMode === 'recommendations' && styles.activeModeButton]}
+          onPress={() => setSearchMode('recommendations')}
+          testID="mode-recommendations"
+        >
+          <Icon name="recommend" size={20} color={searchMode === 'recommendations' ? '#FFF' : '#666'} />
+          <Text style={[styles.modeButtonText, searchMode === 'recommendations' && styles.activeModeButtonText]}>
+            By Hours
+          </Text>
+        </TouchableOpacity>
 
-    if (searchState.searchResults.length > 0) {
-      // TODO: Implement SearchResults component in next task
+        <TouchableOpacity
+          style={[styles.modeButton, searchMode === 'filters' && styles.activeModeButton]}
+          onPress={() => setSearchMode('filters')}
+          testID="mode-filters"
+        >
+          <Icon name="tune" size={20} color={searchMode === 'filters' ? '#FFF' : '#666'} />
+          <Text style={[styles.modeButtonText, searchMode === 'filters' && styles.activeModeButtonText]}>
+            Filters
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+
+  const renderContent = () => {
+    if (isLoading && businesses.length === 0) {
       return (
-        <View style={[styles.resultsContainer, { backgroundColor: theme.backgroundColor }]}>
-          {/* Search results will be implemented in the next task */}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Searching businesses...</Text>
         </View>
       );
     }
 
-    // Default to history view
-    return (
-      <SearchHistory
-        onSearchSelect={handleHistorySearchSelect}
-        onRecommendationSelect={handleRecommendationSelect}
-        currentLocation={searchState.currentLocation || undefined}
-        showRecommendations={true}
-        theme={theme}
-        style={styles.historyContainer}
-      />
-    );
+    switch (searchMode) {
+      case 'recommendations':
+        return (
+          <HoursBasedRecommendations
+            businesses={businesses}
+            currentLocation={currentLocation}
+            onBusinessPress={handleBusinessPress}
+            onRefresh={handleRefresh}
+            isLoading={isLoading}
+            testID="hours-recommendations"
+          />
+        );
+      
+      case 'filters':
+        return (
+          <View style={styles.filtersContainer}>
+            <SearchFiltersBar
+              filters={searchFilters}
+              openNowFilter={openNowFilter}
+              onFilterChange={handleFilterChange}
+              onOpenNowToggle={handleOpenNowToggle}
+              onOpenNowRecommendation={handleOpenNowRecommendation}
+              showEnhancedOpenNow={true}
+              isLoading={isLoading}
+              testID="search-filters"
+            />
+          </View>
+        );
+      
+      default:
+        return (
+          <BusinessListView
+            businesses={filteredBusinesses}
+            currentLocation={currentLocation}
+            onBusinessPress={handleBusinessPress}
+            showEmptyState={true}
+            showLoadingState={isLoading}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+            }
+            testID="search-results"
+          />
+        );
+    }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar
-        barStyle={colorMode === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.backgroundColor}
-      />
+    <SafeAreaView style={styles.container} testID="comprehensive-search-screen">
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
       
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
-        <View style={styles.content}>
-          {/* Search Bar */}
-          <View style={styles.searchBarContainer}>
-            <SearchBar
-              placeholder="Search businesses, categories, or locations..."
-              initialQuery={searchState.query}
-              location={searchState.currentLocation || undefined}
-              onSearch={handleSearch}
-              onQueryChange={handleQueryChange}
-              onSuggestionSelect={handleSuggestionSelect}
-              onFocus={handleSearchFocus}
-              onBlur={handleSearchBlur}
-              onVoiceSearch={handleVoiceSearch}
-              showVoiceSearch={true}
-              showHistory={true}
-              isLoading={searchState.isSearching}
-              theme={theme}
-              debounceMs={300}
-              maxSuggestions={8}
-              performanceMode="fast"
-              style={styles.searchBar}
-            />
-          </View>
-
-          {/* Content Area */}
-          <View style={styles.contentArea}>
-            {getCurrentContent()}
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+      {renderSearchHeader()}
+      {renderModeSelector()}
+      
+      <View style={styles.content}>
+        {renderContent()}
+      </View>
     </SafeAreaView>
   );
 };
@@ -344,40 +453,98 @@ export const ComprehensiveSearchScreen: React.FC<ComprehensiveSearchScreenProps>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8F9FA',
   },
-  keyboardAvoidingView: {
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    gap: 12,
+  },
+  searchInputContainer: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 12,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  searchButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  searchButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modeSelectorContainer: {
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    paddingVertical: 8,
+  },
+  modeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  activeModeButton: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  modeButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  activeModeButtonText: {
+    color: '#FFF',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
   },
-  searchBarContainer: {
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  searchBar: {
-    marginBottom: 0,
-  },
-  contentArea: {
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
   },
-  loadingState: {
-    flex: 1,
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
   },
-  historyContainer: {
+  filtersContainer: {
     flex: 1,
-  },
-  resultsContainer: {
-    flex: 1,
-    paddingTop: 16,
   },
 });
-
-export default ComprehensiveSearchScreen;

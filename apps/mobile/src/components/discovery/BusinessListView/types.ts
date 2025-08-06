@@ -86,6 +86,7 @@ export interface BusinessDistanceDisplayProps {
 }
 
 export interface BusinessHoursIndicatorProps {
+  businessId?: string;
   hours?: Business['hours'];
   isOpen?: boolean;
   status?: string;
@@ -94,5 +95,6 @@ export interface BusinessHoursIndicatorProps {
   size?: 'small' | 'medium' | 'large';
   showText?: boolean;
   showNextChange?: boolean;
+  enableRealTime?: boolean;
   testID?: string;
 }

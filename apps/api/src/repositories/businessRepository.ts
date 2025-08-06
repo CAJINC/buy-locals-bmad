@@ -2,7 +2,7 @@ import { BaseRepository } from './BaseRepository.js';
 import { Business, BusinessSearchQuery, CreateBusinessRequest } from '../types/Business.js';
 import { logger } from '../utils/logger.js';
 import { categoryService } from '../services/categoryService.js';
-import { expandCategoryFilter, CategoryFilter, getAllCategories } from '../constants/businessCategories.js';
+import { expandCategoryFilter, getAllCategories } from '../constants/businessCategories.js';
 import { AdvancedFilters, filterStateService } from '../services/filterStateService.js';
 
 export class BusinessRepository extends BaseRepository<Business> {
@@ -717,7 +717,7 @@ export class BusinessRepository extends BaseRepository<Business> {
       const whereConditions: string[] = ['businesses.is_active = true'];
       const params: any[] = [];
       let paramIndex = 1;
-      let joins: string[] = [];
+      const joins: string[] = [];
       let selectFields = `
         businesses.*,
         COALESCE(
@@ -963,7 +963,7 @@ export class BusinessRepository extends BaseRepository<Business> {
 
       // Add search ranking to order if text search is present
       if (normalizedFilters.search && normalizedFilters.sortBy !== 'distance') {
-        orderBy = 'search_rank DESC, ' + orderBy;
+        orderBy = `search_rank DESC, ${orderBy}`;
       }
 
       // Pagination

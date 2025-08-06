@@ -1,20 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BusinessHoursIndicatorProps } from './types';
-import { BusinessSearchResult } from '../../../services/enhancedLocationSearchService';
+import { useBusinessStatus } from '../../../hooks/useBusinessStatus';
+import { OpenStatus } from '../../hours/OpenStatus';
+import { CountdownTimer } from '../../hours/CountdownTimer';
 
 export const BusinessHoursIndicator: React.FC<BusinessHoursIndicatorProps> = ({
+  businessId,
   hours,
   isOpen,
   status,
   nextChange,
-  timezone,
+  _timezone,
   size = 'medium',
   showText = true,
   showNextChange = true,
+  enableRealTime = false,
   testID = 'business-hours-indicator'
 }) => {
+  const [currentStatus, setCurrentStatus] = useState({ 
+    isOpen: isOpen || false, 
+    status: status || 'unknown',
+    nextChange: nextChange || null 
+  });
+
+  // Real-time status hook (only if enabled and businessId provided)
+  const { statuses, subscribe, unsubscribe } = useBusinessStatus({
+    autoConnect: enableRealTime && !!businessId,
+  });
+
+  // Subscribe/unsubscribe to real-time updates
+  useEffect(() => {
+    if (enableRealTime && businessId) {
+      subscribe(businessId);
+      return () => unsubscribe(businessId);
+    }
+  }, [businessId, enableRealTime, subscribe, unsubscribe]);
+
+  // Update local status when real-time data changes
+  useEffect(() => {
+    if (businessId && statuses.has(businessId)) {
+      const realtimeStatus = statuses.get(businessId);
+      if (realtimeStatus) {
+        setCurrentStatus({
+          isOpen: realtimeStatus.isOpen,
+          status: realtimeStatus.status,
+          nextChange: realtimeStatus.nextChange,
+        });
+      }
+    }
+  }, [businessId, statuses]);
+
+  // Handle status updates from countdown timer
+  const handleStatusUpdate = (newStatus: { isOpen: boolean; nextChange: string | null }) => {
+    setCurrentStatus(prev => ({
+      ...prev,
+      ...newStatus,
+    }));
+  };
   // Use enhanced status data if available, otherwise fall back to calculation
   const isCurrentlyOpen = (): boolean => {
     if (isOpen !== undefined) {
@@ -137,23 +181,50 @@ export const BusinessHoursIndicator: React.FC<BusinessHoursIndicatorProps> = ({
     return null;
   };
 
-  const isOpen = isCurrentlyOpen();
-  const nextChangeTime = getNextChangeTime();
+  // Use real-time status if available, otherwise fallback to calculated
+  const displayIsOpen = currentStatus.isOpen !== undefined ? currentStatus.isOpen : isCurrentlyOpen();
+  const displayNextChange = currentStatus.nextChange || getNextChangeTime();
 
+  // For compact display, use our new components
+  if (size === 'small') {
+    return (
+      <View style={[styles.container, styles[size]]} testID={testID}>
+        <OpenStatus
+          isOpen={displayIsOpen}
+          status={currentStatus.status}
+          compact={true}
+          testID={`${testID}-status`}
+        />
+        {displayNextChange && showNextChange && (
+          <CountdownTimer
+            targetTime={displayNextChange}
+            isOpen={displayIsOpen}
+            compact={true}
+            onStatusUpdate={handleStatusUpdate}
+            testID={`${testID}-countdown`}
+          />
+        )}
+      </View>
+    );
+  }
+
+  // Legacy display for medium/large sizes
+  const nextChangeTime = getNextChangeTime();
+  
   return (
     <View style={[styles.container, styles[size]]} testID={testID}>
       <Icon
-        name={isOpen ? 'schedule' : 'schedule'}
+        name={displayIsOpen ? 'schedule' : 'schedule'}
         size={styles[`icon_${size}`].fontSize}
-        color={isOpen ? '#4CAF50' : '#F44336'}
+        color={displayIsOpen ? '#4CAF50' : '#F44336'}
       />
       {showText && (
         <Text style={[
           styles.statusText, 
           styles[`statusText_${size}`],
-          isOpen ? styles.openText : styles.closedText
+          displayIsOpen ? styles.openText : styles.closedText
         ]}>
-          {isOpen ? 'Open' : 'Closed'}
+          {displayIsOpen ? 'Open' : 'Closed'}
         </Text>
       )}
       {nextChangeTime && showText && (
@@ -171,33 +242,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   small: {
     gap: 2,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   medium: {
     gap: 4,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   large: {
     gap: 6,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   icon_small: {
     fontSize: 12,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   icon_medium: {
     fontSize: 14,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   icon_large: {
     fontSize: 16,
   },
   statusText: {
     fontWeight: '600',
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   statusText_small: {
     fontSize: 11,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   statusText_medium: {
     fontSize: 12,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   statusText_large: {
     fontSize: 14,
   },
@@ -211,12 +291,15 @@ const styles = StyleSheet.create({
     color: '#888',
     fontWeight: '400',
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   nextOpenText_small: {
     fontSize: 10,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   nextOpenText_medium: {
     fontSize: 11,
   },
+  // eslint-disable-next-line react-native/no-unused-styles
   nextOpenText_large: {
     fontSize: 12,
   },

@@ -10,11 +10,9 @@ import {
   businessSearchSchema,
   createBusinessSchema,
   updateBusinessSchema,
-  locationSearchSchema,
   advancedLocationSearchSchema,
   businessDensitySchema,
   cacheInvalidationSchema,
-  nearestBusinessesParamSchema,
   categoryQuerySchema,
   categoryAnalyticsSchema,
   categoryInteractionSchema,
@@ -23,7 +21,6 @@ import {
   filterPresetSchema,
   LocationSearchError,
   LocationSearchErrorType,
-  locationSearchErrorMap,
   performanceThresholds,
 } from '../schemas/businessSchemas.js';
 import Joi from 'joi';
@@ -38,7 +35,6 @@ import { categoryService } from '../services/categoryService.js';
 import { filterStateService } from '../services/filterStateService.js';
 import { 
   getCategoryMetadata, 
-  getCategoriesByPopularity,
   BUSINESS_CATEGORY_OPTIONS 
 } from '../constants/businessCategories.js';
 import { NextFunction, Request, Response } from 'express';
