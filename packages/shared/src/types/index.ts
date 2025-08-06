@@ -2,6 +2,7 @@
 export * from './user';
 export * from './business';
 export * from './booking';
+export * from './payment';
 
 // Common response types
 export interface ApiResponse<T = unknown> {

@@ -1,6 +1,7 @@
 export * from './user';
 export * from './business';
 export * from './booking';
+export * from './payment';
 export interface ApiResponse<T = unknown> {
     success: boolean;
     data?: T;

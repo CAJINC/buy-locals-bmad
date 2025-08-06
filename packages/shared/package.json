@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/stripe": "^8.0.416",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.0",
