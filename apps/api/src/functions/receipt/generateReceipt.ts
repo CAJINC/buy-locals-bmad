@@ -244,7 +244,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
         state: transaction.business_state,
         postalCode: transaction.business_postal_code,
         logoUrl: transaction.business_logo_url,
-      } as any, // Cast as any for Business type compatibility
+      } as unknown as ReceiptData['business'],
       customer: {
         id: transaction.customer_id,
         email: transaction.customer_email,
@@ -253,7 +253,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           lastName: transaction.customer_last_name,
           phone: transaction.customer_phone,
         },
-      } as any, // Cast as any for User type compatibility
+      } as unknown as ReceiptData['customer'],
       metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined,
     };
 
@@ -342,7 +342,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
           ? undefined
           : typeof generationResult.content === 'string'
             ? generationResult.content
-            : Buffer.from(generationResult.content!).toString('base64'),
+            : generationResult.content
+              ? Buffer.from(generationResult.content).toString('base64')
+              : undefined,
       downloadUrl: generationResult.downloadUrl,
       generatedAt: generationResult.generatedAt.toISOString(),
     };

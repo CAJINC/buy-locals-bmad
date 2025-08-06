@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
 import { logger } from '../utils/logger.js';
-import { EscrowTransaction, PaymentResult } from '../types/Payment.js';
+import type {} from '../types/Payment.js';
 import { Business } from '../types/Business.js';
 import { User } from '../types/User.js';
 
@@ -27,7 +27,7 @@ export interface ReceiptData {
   items: ReceiptItem[];
   business: Business;
   customer: User;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ReceiptItem {
@@ -90,7 +90,7 @@ export interface ReceiptGenerationResult {
 
 /**
  * Comprehensive Receipt Generation Service for Buy Locals Platform
- * 
+ *
  * Features:
  * - Multi-format receipt generation (PDF, HTML, Text)
  * - Multi-language support (English, Spanish, French)
@@ -129,7 +129,7 @@ export class ReceiptService {
       contact: 'Contact us at',
       verifyReceipt: 'Verify this receipt by scanning the QR code',
       taxBreakdown: 'Tax Breakdown',
-      refundInfo: 'Refund Information'
+      refundInfo: 'Refund Information',
     },
     es: {
       receipt: 'Recibo',
@@ -155,7 +155,7 @@ export class ReceiptService {
       contact: 'Contáctanos en',
       verifyReceipt: 'Verifique este recibo escaneando el código QR',
       taxBreakdown: 'Desglose de Impuestos',
-      refundInfo: 'Información de Reembolso'
+      refundInfo: 'Información de Reembolso',
     },
     fr: {
       receipt: 'Reçu',
@@ -181,8 +181,8 @@ export class ReceiptService {
       contact: 'Contactez-nous à',
       verifyReceipt: 'Vérifiez ce reçu en scannant le code QR',
       taxBreakdown: 'Ventilation des Taxes',
-      refundInfo: 'Informations de Remboursement'
-    }
+      refundInfo: 'Informations de Remboursement',
+    },
   };
 
   constructor() {
@@ -197,13 +197,13 @@ export class ReceiptService {
     options: ReceiptGenerationOptions
   ): Promise<ReceiptGenerationResult> {
     const correlationId = uuidv4();
-    
+
     try {
       logger.info('Generating receipt', {
         receiptId: receiptData.id,
         format: options.format,
         language: options.language,
-        correlationId
+        correlationId,
       });
 
       // Generate QR code if requested
@@ -220,19 +220,37 @@ export class ReceiptService {
 
       switch (options.format) {
         case 'pdf':
-          content = await this.generatePdfReceipt(receiptData, options, qrCodeDataUrl, digitalSignature);
-          downloadUrl = await this.uploadReceiptToStorage(receiptData.receiptNumber, content, 'pdf');
+          content = await this.generatePdfReceipt(
+            receiptData,
+            options,
+            qrCodeDataUrl,
+            digitalSignature
+          );
+          downloadUrl = await this.uploadReceiptToStorage(
+            receiptData.receiptNumber,
+            content,
+            'pdf'
+          );
           break;
-        
+
         case 'html':
-          content = await this.generateHtmlReceipt(receiptData, options, qrCodeDataUrl, digitalSignature);
-          downloadUrl = await this.uploadReceiptToStorage(receiptData.receiptNumber, Buffer.from(content), 'html');
+          content = await this.generateHtmlReceipt(
+            receiptData,
+            options,
+            qrCodeDataUrl,
+            digitalSignature
+          );
+          downloadUrl = await this.uploadReceiptToStorage(
+            receiptData.receiptNumber,
+            Buffer.from(content),
+            'html'
+          );
           break;
-        
+
         case 'text':
           content = this.generateTextReceipt(receiptData, options, digitalSignature);
           break;
-        
+
         default:
           throw new Error(`Unsupported receipt format: ${options.format}`);
       }
@@ -249,7 +267,7 @@ export class ReceiptService {
         downloadUrl,
         digitalSignature,
         generatedAt: new Date(),
-        correlationId
+        correlationId,
       });
 
       const result: ReceiptGenerationResult = {
@@ -259,24 +277,23 @@ export class ReceiptService {
         format: options.format,
         content: options.format !== 'pdf' ? content : undefined, // Don't return PDF buffer in response
         downloadUrl,
-        generatedAt: new Date()
+        generatedAt: new Date(),
       };
 
       logger.info('Receipt generated successfully', {
         receiptId: receiptData.id,
         receiptNumber: receiptData.receiptNumber,
         format: options.format,
-        correlationId
+        correlationId,
       });
 
       return result;
-
     } catch (error) {
       logger.error('Failed to generate receipt', {
         receiptId: receiptData.id,
         format: options.format,
         error: error instanceof Error ? error.message : String(error),
-        correlationId
+        correlationId,
       });
 
       return {
@@ -285,7 +302,7 @@ export class ReceiptService {
         receiptNumber: receiptData.receiptNumber,
         format: options.format,
         error: error instanceof Error ? error.message : String(error),
-        generatedAt: new Date()
+        generatedAt: new Date(),
       };
     }
   }
@@ -305,7 +322,7 @@ export class ReceiptService {
         to: options.to,
         attachPdf: options.attachPdf,
         language: options.language,
-        correlationId
+        correlationId,
       });
 
       // Generate HTML content for email
@@ -314,7 +331,7 @@ export class ReceiptService {
         language: options.language,
         includeQrCode: true,
         includeTaxBreakdown: true,
-        includeRefundInfo: receiptData.status !== 'paid'
+        includeRefundInfo: receiptData.status !== 'paid',
       });
 
       // Generate PDF attachment if requested
@@ -325,7 +342,7 @@ export class ReceiptService {
           language: options.language,
           includeQrCode: true,
           includeTaxBreakdown: true,
-          includeRefundInfo: receiptData.status !== 'paid'
+          includeRefundInfo: receiptData.status !== 'paid',
         });
       }
 
@@ -340,7 +357,7 @@ export class ReceiptService {
         receiptData,
         customMessage: options.customMessage,
         language: options.language,
-        correlationId
+        correlationId,
       });
 
       // Log email delivery
@@ -350,29 +367,28 @@ export class ReceiptService {
         recipient: options.to,
         messageId: emailResult.messageId,
         success: emailResult.success,
-        correlationId
+        correlationId,
       });
 
       logger.info('Receipt email sent successfully', {
         receiptId: receiptData.id,
         messageId: emailResult.messageId,
-        correlationId
+        correlationId,
       });
 
       return emailResult;
-
     } catch (error) {
       logger.error('Failed to send receipt email', {
         receiptId: receiptData.id,
         to: options.to,
         error: error instanceof Error ? error.message : String(error),
-        correlationId
+        correlationId,
       });
 
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        deliveredAt: new Date()
+        deliveredAt: new Date(),
       };
     }
   }
@@ -383,15 +399,15 @@ export class ReceiptService {
   generateReceiptNumber(businessId: string): string {
     const year = new Date().getFullYear();
     const businessPrefix = businessId.substring(0, 4).toUpperCase();
-    
+
     // Get current counter for this business
     const counterKey = `${businessId}-${year}`;
     const currentCounter = this.receiptCounter.get(counterKey) || 0;
     const newCounter = currentCounter + 1;
-    
+
     // Update counter
     this.receiptCounter.set(counterKey, newCounter);
-    
+
     // Format: BUSI-2024-000001
     return `${businessPrefix}-${year}-${newCounter.toString().padStart(6, '0')}`;
   }
@@ -415,7 +431,7 @@ export class ReceiptService {
     } catch (error) {
       logger.error('Failed to fetch receipt by transaction ID', {
         transactionId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }
@@ -440,22 +456,22 @@ export class ReceiptService {
     try {
       // This would query your database with filters
       const results = await this.queryTransactionHistory(options);
-      
+
       return {
         receipts: results.receipts,
         totalCount: results.totalCount,
-        hasMore: results.totalCount > (options.offset + options.limit)
+        hasMore: results.totalCount > options.offset + options.limit,
       };
     } catch (error) {
       logger.error('Failed to fetch transaction history', {
         options,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       return {
         receipts: [],
         totalCount: 0,
-        hasMore: false
+        hasMore: false,
       };
     }
   }
@@ -469,8 +485,8 @@ export class ReceiptService {
       margin: 1,
       color: {
         dark: '#000000',
-        light: '#FFFFFF'
-      }
+        light: '#FFFFFF',
+      },
     });
   }
 
@@ -483,7 +499,7 @@ export class ReceiptService {
       currency: receiptData.currency,
       businessId: receiptData.businessId,
       customerId: receiptData.customerId,
-      createdAt: receiptData.createdAt.toISOString()
+      createdAt: receiptData.createdAt.toISOString(),
     };
 
     // In production, use a proper HMAC with a secret key
@@ -510,114 +526,125 @@ export class ReceiptService {
         const branding = options.branding || this.getDefaultBranding();
 
         // Header with business branding
-        doc.fontSize(24)
-           .fillColor(branding.primaryColor)
-           .text(receiptData.business.name, 50, 50);
+        doc.fontSize(24).fillColor(branding.primaryColor).text(receiptData.business.name, 50, 50);
 
-        doc.fontSize(14)
-           .fillColor('black')
-           .text(`${t.receipt} #${receiptData.receiptNumber}`, 50, 90);
+        doc
+          .fontSize(14)
+          .fillColor('black')
+          .text(`${t.receipt} #${receiptData.receiptNumber}`, 50, 90);
 
         doc.text(`${t.date}: ${receiptData.createdAt.toLocaleDateString()}`, 50, 110);
 
         // Business and customer information
-        doc.fontSize(12)
-           .text(`${t.business}:`, 50, 140)
-           .text(receiptData.business.name, 70, 160)
-           .text(receiptData.business.address || '', 70, 175);
+        doc
+          .fontSize(12)
+          .text(`${t.business}:`, 50, 140)
+          .text(receiptData.business.name, 70, 160)
+          .text(receiptData.business.address || '', 70, 175);
 
-        doc.text(`${t.customer}:`, 50, 200)
-           .text(`${receiptData.customer.profile.firstName} ${receiptData.customer.profile.lastName}`, 70, 220)
-           .text(receiptData.customer.email, 70, 235);
+        doc
+          .text(`${t.customer}:`, 50, 200)
+          .text(
+            `${receiptData.customer.profile.firstName} ${receiptData.customer.profile.lastName}`,
+            70,
+            220
+          )
+          .text(receiptData.customer.email, 70, 235);
 
         // Items table
         let yPosition = 270;
-        doc.fontSize(14)
-           .text(t.items, 50, yPosition);
+        doc.fontSize(14).text(t.items, 50, yPosition);
 
         yPosition += 25;
-        doc.fontSize(10)
-           .text('Description', 50, yPosition)
-           .text('Qty', 300, yPosition)
-           .text('Unit Price', 350, yPosition)
-           .text('Total', 450, yPosition);
+        doc
+          .fontSize(10)
+          .text('Description', 50, yPosition)
+          .text('Qty', 300, yPosition)
+          .text('Unit Price', 350, yPosition)
+          .text('Total', 450, yPosition);
 
         yPosition += 15;
-        doc.moveTo(50, yPosition)
-           .lineTo(500, yPosition)
-           .stroke();
+        doc.moveTo(50, yPosition).lineTo(500, yPosition).stroke();
 
         yPosition += 10;
 
         // Item details
         receiptData.items.forEach(item => {
-          doc.fontSize(9)
-             .text(item.name, 50, yPosition)
-             .text(item.quantity.toString(), 300, yPosition)
-             .text(`$${(item.unitPrice / 100).toFixed(2)}`, 350, yPosition)
-             .text(`$${(item.totalPrice / 100).toFixed(2)}`, 450, yPosition);
+          doc
+            .fontSize(9)
+            .text(item.name, 50, yPosition)
+            .text(item.quantity.toString(), 300, yPosition)
+            .text(`$${(item.unitPrice / 100).toFixed(2)}`, 350, yPosition)
+            .text(`$${(item.totalPrice / 100).toFixed(2)}`, 450, yPosition);
           yPosition += 15;
         });
 
         // Totals section
         yPosition += 20;
         const subtotal = receiptData.amount - receiptData.taxAmount - receiptData.platformFee;
-        
-        doc.fontSize(10)
-           .text(`${t.subtotal}:`, 350, yPosition)
-           .text(`$${(subtotal / 100).toFixed(2)}`, 450, yPosition);
+
+        doc
+          .fontSize(10)
+          .text(`${t.subtotal}:`, 350, yPosition)
+          .text(`$${(subtotal / 100).toFixed(2)}`, 450, yPosition);
         yPosition += 15;
 
         if (options.includeTaxBreakdown) {
-          doc.text(`${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%):`, 350, yPosition)
-             .text(`$${(receiptData.taxAmount / 100).toFixed(2)}`, 450, yPosition);
+          doc
+            .text(`${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%):`, 350, yPosition)
+            .text(`$${(receiptData.taxAmount / 100).toFixed(2)}`, 450, yPosition);
           yPosition += 15;
         }
 
-        doc.text(`${t.platformFee}:`, 350, yPosition)
-           .text(`$${(receiptData.platformFee / 100).toFixed(2)}`, 450, yPosition);
+        doc
+          .text(`${t.platformFee}:`, 350, yPosition)
+          .text(`$${(receiptData.platformFee / 100).toFixed(2)}`, 450, yPosition);
         yPosition += 15;
 
         // Total line
-        doc.moveTo(350, yPosition)
-           .lineTo(500, yPosition)
-           .stroke();
+        doc.moveTo(350, yPosition).lineTo(500, yPosition).stroke();
         yPosition += 10;
 
-        doc.fontSize(12)
-           .fillColor(branding.primaryColor)
-           .text(`${t.total}:`, 350, yPosition)
-           .text(`$${(receiptData.amount / 100).toFixed(2)}`, 450, yPosition);
+        doc
+          .fontSize(12)
+          .fillColor(branding.primaryColor)
+          .text(`${t.total}:`, 350, yPosition)
+          .text(`$${(receiptData.amount / 100).toFixed(2)}`, 450, yPosition);
 
         // QR Code for verification
         if (qrCodeDataUrl && options.includeQrCode) {
           yPosition += 40;
-          const qrCodeBuffer = Buffer.from(qrCodeDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
+          const qrCodeBuffer = Buffer.from(
+            qrCodeDataUrl.replace(/^data:image\/png;base64,/, ''),
+            'base64'
+          );
           doc.image(qrCodeBuffer, 400, yPosition, { width: 80 });
-          
-          doc.fontSize(8)
-             .fillColor('black')
-             .text(t.verifyReceipt, 320, yPosition + 85, { width: 160, align: 'center' });
+
+          doc
+            .fontSize(8)
+            .fillColor('black')
+            .text(t.verifyReceipt, 320, yPosition + 85, { width: 160, align: 'center' });
         }
 
         // Footer with digital signature
         if (signature) {
-          doc.fontSize(8)
-             .fillColor('gray')
-             .text(`Digital Signature: ${signature}`, 50, doc.page.height - 50);
+          doc
+            .fontSize(8)
+            .fillColor('gray')
+            .text(`Digital Signature: ${signature}`, 50, doc.page.height - 50);
         }
 
         // Thank you message
-        doc.fontSize(10)
-           .fillColor('black')
-           .text(t.thankYou, 50, doc.page.height - 100, { align: 'center' });
+        doc
+          .fontSize(10)
+          .fillColor('black')
+          .text(t.thankYou, 50, doc.page.height - 100, { align: 'center' });
 
         if (branding.customMessage) {
           doc.text(branding.customMessage, 50, doc.page.height - 80, { align: 'center' });
         }
 
         doc.end();
-
       } catch (error) {
         reject(error);
       }
@@ -632,9 +659,9 @@ export class ReceiptService {
   ): Promise<string> {
     const t = this.translations[options.language];
     const branding = options.branding || this.getDefaultBranding();
-    
+
     const subtotal = receiptData.amount - receiptData.taxAmount - receiptData.platformFee;
-    
+
     return `
 <!DOCTYPE html>
 <html lang="${options.language}">
@@ -748,7 +775,9 @@ export class ReceiptService {
             color: #999;
             margin-top: 10px;
         }
-        ${options.includeRefundInfo && receiptData.refundAmount ? `
+        ${
+          options.includeRefundInfo && receiptData.refundAmount
+            ? `
         .refund-info {
             background-color: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -756,7 +785,9 @@ export class ReceiptService {
             padding: 15px;
             margin: 20px 0;
         }
-        ` : ''}
+        `
+            : ''
+        }
     </style>
 </head>
 <body>
@@ -787,13 +818,17 @@ export class ReceiptService {
         </div>
     </div>
 
-    ${options.includeRefundInfo && receiptData.refundAmount ? `
+    ${
+      options.includeRefundInfo && receiptData.refundAmount
+        ? `
     <div class="refund-info">
         <strong>${t.refundInfo}:</strong><br>
         ${t.refunded}: $${(receiptData.refundAmount / 100).toFixed(2)}<br>
         ${receiptData.refundedAt ? `Date: ${receiptData.refundedAt.toLocaleDateString()}` : ''}
     </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <table class="items-table">
         <thead>
@@ -805,7 +840,9 @@ export class ReceiptService {
             </tr>
         </thead>
         <tbody>
-            ${receiptData.items.map(item => `
+            ${receiptData.items
+              .map(
+                item => `
             <tr>
                 <td>
                     <strong>${item.name}</strong>
@@ -815,7 +852,9 @@ export class ReceiptService {
                 <td>$${(item.unitPrice / 100).toFixed(2)}</td>
                 <td>$${(item.totalPrice / 100).toFixed(2)}</td>
             </tr>
-            `).join('')}
+            `
+              )
+              .join('')}
         </tbody>
     </table>
 
@@ -825,12 +864,16 @@ export class ReceiptService {
                 <td>${t.subtotal}:</td>
                 <td>$${(subtotal / 100).toFixed(2)}</td>
             </tr>
-            ${options.includeTaxBreakdown ? `
+            ${
+              options.includeTaxBreakdown
+                ? `
             <tr>
                 <td>${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%):</td>
                 <td>$${(receiptData.taxAmount / 100).toFixed(2)}</td>
             </tr>
-            ` : ''}
+            `
+                : ''
+            }
             <tr>
                 <td>${t.platformFee}:</td>
                 <td>$${(receiptData.platformFee / 100).toFixed(2)}</td>
@@ -842,12 +885,16 @@ export class ReceiptService {
         </table>
     </div>
 
-    ${qrCodeDataUrl && options.includeQrCode ? `
+    ${
+      qrCodeDataUrl && options.includeQrCode
+        ? `
     <div class="qr-section">
         <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 150px; height: 150px;">
         <div style="margin-top: 10px;">${t.verifyReceipt}</div>
     </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <div class="footer">
         <div>${t.thankYou}</div>
@@ -872,65 +919,66 @@ export class ReceiptService {
     const subtotal = receiptData.amount - receiptData.taxAmount - receiptData.platformFee;
 
     let receipt = '';
-    receipt += `${line  }\n`;
-    receipt += `${this.centerText(receiptData.business.name.toUpperCase(), width)  }\n`;
-    receipt += `${this.centerText(`${t.receipt} #${receiptData.receiptNumber}`, width)  }\n`;
-    receipt += `${line  }\n`;
+    receipt += `${line}\n`;
+    receipt += `${this.centerText(receiptData.business.name.toUpperCase(), width)}\n`;
+    receipt += `${this.centerText(`${t.receipt} #${receiptData.receiptNumber}`, width)}\n`;
+    receipt += `${line}\n`;
     receipt += `${t.date}: ${receiptData.createdAt.toLocaleDateString()}\n`;
     receipt += `${t.transactionId}: ${receiptData.transactionId}\n`;
     receipt += `${t.status}: ${t[receiptData.status]}\n`;
-    receipt += `${line  }\n`;
-    
+    receipt += `${line}\n`;
+
     // Business info
     receipt += `${t.business}:\n`;
     receipt += `  ${receiptData.business.name}\n`;
     if (receiptData.business.address) receipt += `  ${receiptData.business.address}\n`;
     receipt += '\n';
-    
+
     // Customer info
     receipt += `${t.customer}:\n`;
     receipt += `  ${receiptData.customer.profile.firstName} ${receiptData.customer.profile.lastName}\n`;
     receipt += `  ${receiptData.customer.email}\n`;
     receipt += '\n';
-    
+
     // Items
     receipt += `${t.items}:\n`;
-    receipt += `${'-'.repeat(width)  }\n`;
-    
+    receipt += `${'-'.repeat(width)}\n`;
+
     receiptData.items.forEach(item => {
       receipt += `${item.name}\n`;
       receipt += `  ${item.quantity} x $${(item.unitPrice / 100).toFixed(2)} = $${(item.totalPrice / 100).toFixed(2)}\n`;
     });
-    
-    receipt += `${'-'.repeat(width)  }\n`;
-    
+
+    receipt += `${'-'.repeat(width)}\n`;
+
     // Totals
-    receipt += `${this.rightAlign(`${t.subtotal}: $${(subtotal / 100).toFixed(2)}`, width)  }\n`;
-    
+    receipt += `${this.rightAlign(`${t.subtotal}: $${(subtotal / 100).toFixed(2)}`, width)}\n`;
+
     if (options.includeTaxBreakdown) {
-      receipt += `${this.rightAlign(`${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%): $${(receiptData.taxAmount / 100).toFixed(2)}`, width)  }\n`;
+      receipt += `${this.rightAlign(`${t.tax} (${(receiptData.taxRate * 100).toFixed(1)}%): $${(receiptData.taxAmount / 100).toFixed(2)}`, width)}\n`;
     }
-    
-    receipt += `${this.rightAlign(`${t.platformFee}: $${(receiptData.platformFee / 100).toFixed(2)}`, width)  }\n`;
-    receipt += `${'='.repeat(width)  }\n`;
-    receipt += `${this.rightAlign(`${t.total}: $${(receiptData.amount / 100).toFixed(2)}`, width)  }\n`;
-    receipt += `${'='.repeat(width)  }\n`;
-    
+
+    receipt += `${this.rightAlign(`${t.platformFee}: $${(receiptData.platformFee / 100).toFixed(2)}`, width)}\n`;
+    receipt += `${'='.repeat(width)}\n`;
+    receipt += `${this.rightAlign(`${t.total}: $${(receiptData.amount / 100).toFixed(2)}`, width)}\n`;
+    receipt += `${'='.repeat(width)}\n`;
+
     // Refund info
     if (options.includeRefundInfo && receiptData.refundAmount) {
       receipt += '\n' + `${t.refundInfo}:\n`;
       receipt += `${t.refunded}: $${(receiptData.refundAmount / 100).toFixed(2)}\n`;
-      if (receiptData.refundedAt) receipt += `Date: ${receiptData.refundedAt.toLocaleDateString()}\n`;
+      if (receiptData.refundedAt)
+        receipt += `Date: ${receiptData.refundedAt.toLocaleDateString()}\n`;
     }
-    
+
     // Footer
-    receipt += `\n${  this.centerText(t.thankYou, width)  }\n`;
-    receipt += `${this.centerText('support@buylocals.com', width)  }\n`;
-    
+    receipt += `\n${this.centerText(t.thankYou, width)}\n`;
+    receipt += `${this.centerText('support@buylocals.com', width)}\n`;
+
     if (signature) {
       receipt += '\n' + `Digital Signature: ${signature}\n`;
     }
-    
+
     return receipt;
   }
 
@@ -950,7 +998,7 @@ export class ReceiptService {
       primaryColor: '#4f46e5',
       secondaryColor: '#64748b',
       fontFamily: 'Inter, system-ui, -apple-system',
-      customMessage: 'Proudly supporting local businesses'
+      customMessage: 'Proudly supporting local businesses',
     };
   }
 
@@ -973,64 +1021,80 @@ export class ReceiptService {
   }): Promise<ReceiptEmailResult> {
     // This would integrate with your existing email service (SendGrid, AWS SES, etc.)
     // For now, returning a mock result following the established pattern
-    
+
     try {
       // Mock email sending - replace with actual implementation
       const messageId = `receipt_${uuidv4()}`;
-      
+
       logger.info('Email sent successfully', {
         messageId,
         to: params.to,
         subject: params.subject,
-        correlationId: params.correlationId
+        correlationId: params.correlationId,
       });
 
       return {
         success: true,
         messageId,
-        deliveredAt: new Date()
+        deliveredAt: new Date(),
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        deliveredAt: new Date()
+        deliveredAt: new Date(),
       };
     }
   }
 
-  private async uploadReceiptToStorage(receiptNumber: string, content: Buffer, format: string): Promise<string> {
+  private async uploadReceiptToStorage(
+    receiptNumber: string,
+    content: Buffer,
+    format: string
+  ): Promise<string> {
     // This would upload to your S3 bucket or storage service
     // For now, returning a mock URL following the established pattern
     const fileName = `receipts/${receiptNumber}.${format}`;
     const downloadUrl = `${process.env.CDN_URL}/${fileName}`;
-    
+
     logger.info('Receipt uploaded to storage', {
       receiptNumber,
       fileName,
       downloadUrl,
-      size: content.length
+      size: content.length,
     });
 
     return downloadUrl;
   }
 
-  private async storeReceiptRecord(record: any): Promise<void> {
+  private async storeReceiptRecord(record: {
+    receiptId: string;
+    [key: string]: unknown;
+  }): Promise<void> {
     // This would store in your database following the established repository pattern
     logger.info('Receipt record stored', { receiptId: record.receiptId });
   }
 
-  private async logEmailDelivery(log: any): Promise<void> {
+  private async logEmailDelivery(log: {
+    receiptId: string;
+    success: boolean;
+    [key: string]: unknown;
+  }): Promise<void> {
     // This would log to your audit system following the established pattern
     logger.info('Email delivery logged', { receiptId: log.receiptId, success: log.success });
   }
 
-  private async fetchReceiptFromDatabase(criteria: { transactionId?: string; receiptId?: string }): Promise<ReceiptData | null> {
+  private async fetchReceiptFromDatabase(_criteria: {
+    transactionId?: string;
+    receiptId?: string;
+  }): Promise<ReceiptData | null> {
     // Mock implementation - replace with actual database query
     return null;
   }
 
-  private async queryTransactionHistory(options: any): Promise<{ receipts: ReceiptData[]; totalCount: number }> {
+  private async queryTransactionHistory(
+    _options: unknown
+  ): Promise<{ receipts: ReceiptData[]; totalCount: number }> {
     // Mock implementation - replace with actual database query
     return { receipts: [], totalCount: 0 };
   }

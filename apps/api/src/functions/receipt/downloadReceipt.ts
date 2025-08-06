@@ -163,8 +163,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       // Generate receipt in requested format
       const receiptService = new ReceiptService();
       const generationResult = await receiptService.generateReceipt(transactionData, {
-        format: format as any,
-        language: language as any,
+        format: format as 'pdf' | 'html' | 'text',
+        language: language as 'en' | 'es' | 'fr',
         includeQrCode: true,
         includeTaxBreakdown: true,
         includeRefundInfo: transactionData.status !== 'paid',
@@ -287,7 +287,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
 // Helper functions
 
-async function getTransactionDataForReceipt(transactionId: string): Promise<any> {
+async function getTransactionDataForReceipt(transactionId: string): Promise<unknown> {
   try {
     const query = `
       SELECT 
