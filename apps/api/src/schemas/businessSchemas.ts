@@ -585,3 +585,198 @@ export const filterPresetSchema = Joi.object({
   description: Joi.string().max(500).optional(),
   filters: advancedFilterSchema.required(),
 });
+
+// Availability Settings Schemas
+export const businessHoursForDaySchema = Joi.object({
+  isOpen: Joi.boolean().required(),
+  open: Joi.string()
+    .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .when('isOpen', { is: true, then: Joi.required(), otherwise: Joi.optional() })
+    .messages({
+      'string.pattern.base': 'Time must be in HH:mm format (e.g., 09:30)',
+    }),
+  close: Joi.string()
+    .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .when('isOpen', { is: true, then: Joi.required(), otherwise: Joi.optional() })
+    .messages({
+      'string.pattern.base': 'Time must be in HH:mm format (e.g., 17:30)',
+    }),
+  breaks: Joi.array()
+    .items(
+      Joi.object({
+        start: Joi.string()
+          .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+          .required()
+          .messages({
+            'string.pattern.base': 'Break start time must be in HH:mm format',
+          }),
+        end: Joi.string()
+          .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+          .required()
+          .messages({
+            'string.pattern.base': 'Break end time must be in HH:mm format',
+          }),
+      })
+    )
+    .optional(),
+});
+
+export const serviceAvailabilitySchema = Joi.object({
+  id: Joi.string().optional(), // Auto-generated if not provided
+  name: Joi.string().min(1).max(255).required().messages({
+    'string.min': 'Service name is required',
+    'string.max': 'Service name cannot exceed 255 characters',
+    'any.required': 'Service name is required',
+  }),
+  duration: Joi.number().integer().min(15).max(480).required().messages({
+    'number.base': 'Duration must be a number',
+    'number.integer': 'Duration must be a whole number of minutes',
+    'number.min': 'Service duration must be at least 15 minutes',
+    'number.max': 'Service duration cannot exceed 480 minutes (8 hours)',
+    'any.required': 'Service duration is required',
+  }),
+  bufferTime: Joi.number().integer().min(0).max(120).default(15).messages({
+    'number.base': 'Buffer time must be a number',
+    'number.integer': 'Buffer time must be a whole number of minutes',
+    'number.min': 'Buffer time cannot be negative',
+    'number.max': 'Buffer time cannot exceed 120 minutes',
+  }),
+  price: Joi.number().min(0).max(10000).optional().messages({
+    'number.base': 'Price must be a number',
+    'number.min': 'Price cannot be negative',
+    'number.max': 'Price cannot exceed $10,000',
+  }),
+  description: Joi.string().max(1000).optional().messages({
+    'string.max': 'Service description cannot exceed 1000 characters',
+  }),
+  isActive: Joi.boolean().default(true),
+  maxBookingsPerDay: Joi.number().integer().min(1).max(100).optional().messages({
+    'number.base': 'Max bookings per day must be a number',
+    'number.integer': 'Max bookings per day must be a whole number',
+    'number.min': 'Max bookings per day must be at least 1',
+    'number.max': 'Max bookings per day cannot exceed 100',
+  }),
+  advanceBookingDays: Joi.number().integer().min(1).max(365).optional().messages({
+    'number.base': 'Advance booking days must be a number',
+    'number.integer': 'Advance booking days must be a whole number',
+    'number.min': 'Advance booking days must be at least 1',
+    'number.max': 'Advance booking days cannot exceed 365',
+  }),
+  cancellationHours: Joi.number().integer().min(0).max(168).optional().messages({
+    'number.base': 'Cancellation hours must be a number',
+    'number.integer': 'Cancellation hours must be a whole number',
+    'number.min': 'Cancellation hours cannot be negative',
+    'number.max': 'Cancellation hours cannot exceed 168 (1 week)',
+  }),
+});
+
+export const specialHoursSchema = Joi.object({
+  date: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Date must be in YYYY-MM-DD format',
+      'any.required': 'Date is required',
+    }),
+  hours: Joi.object({
+    isOpen: Joi.boolean().required(),
+    open: Joi.string()
+      .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .when('isOpen', { is: true, then: Joi.required(), otherwise: Joi.optional() })
+      .messages({
+        'string.pattern.base': 'Open time must be in HH:mm format',
+      }),
+    close: Joi.string()
+      .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .when('isOpen', { is: true, then: Joi.required(), otherwise: Joi.optional() })
+      .messages({
+        'string.pattern.base': 'Close time must be in HH:mm format',
+      }),
+  }).required(),
+  reason: Joi.string().max(255).optional().messages({
+    'string.max': 'Reason cannot exceed 255 characters',
+  }),
+});
+
+export const bookingSettingsSchema = Joi.object({
+  minAdvanceBookingHours: Joi.number().integer().min(0).max(168).default(2).messages({
+    'number.base': 'Min advance booking hours must be a number',
+    'number.integer': 'Min advance booking hours must be a whole number',
+    'number.min': 'Min advance booking hours cannot be negative',
+    'number.max': 'Min advance booking hours cannot exceed 168 (1 week)',
+  }),
+  maxAdvanceBookingDays: Joi.number().integer().min(1).max(365).default(90).messages({
+    'number.base': 'Max advance booking days must be a number',
+    'number.integer': 'Max advance booking days must be a whole number',
+    'number.min': 'Max advance booking days must be at least 1',
+    'number.max': 'Max advance booking days cannot exceed 365',
+  }),
+  defaultServiceDuration: Joi.number().integer().min(15).max(480).default(60).messages({
+    'number.base': 'Default service duration must be a number',
+    'number.integer': 'Default service duration must be a whole number',
+    'number.min': 'Default service duration must be at least 15 minutes',
+    'number.max': 'Default service duration cannot exceed 480 minutes',
+  }),
+  defaultBufferTime: Joi.number().integer().min(0).max(120).default(15).messages({
+    'number.base': 'Default buffer time must be a number',
+    'number.integer': 'Default buffer time must be a whole number',
+    'number.min': 'Default buffer time cannot be negative',
+    'number.max': 'Default buffer time cannot exceed 120 minutes',
+  }),
+  allowOnlineBooking: Joi.boolean().default(true),
+  requireApproval: Joi.boolean().default(false),
+  autoConfirm: Joi.boolean().default(true),
+});
+
+export const availabilitySettingsSchema = Joi.object({
+  businessHours: Joi.object()
+    .pattern(
+      Joi.number().integer().min(0).max(6), // Day of week (0=Sunday, 6=Saturday)
+      businessHoursForDaySchema
+    )
+    .optional(),
+  services: Joi.array().items(serviceAvailabilitySchema).max(20).optional().messages({
+    'array.max': 'Maximum 20 services can be configured',
+  }),
+  holidayDates: Joi.array()
+    .items(
+      Joi.string()
+        .pattern(/^\d{4}-\d{2}-\d{2}$/)
+        .messages({
+          'string.pattern.base': 'Holiday dates must be in YYYY-MM-DD format',
+        })
+    )
+    .max(50)
+    .unique()
+    .optional()
+    .messages({
+      'array.max': 'Maximum 50 holiday dates can be configured',
+      'array.unique': 'Holiday dates must be unique',
+    }),
+  specialHours: Joi.array().items(specialHoursSchema).max(100).optional().messages({
+    'array.max': 'Maximum 100 special hours entries can be configured',
+  }),
+  bookingSettings: bookingSettingsSchema.optional(),
+  timezone: Joi.string()
+    .valid(
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+      'America/Anchorage',
+      'Pacific/Honolulu',
+      'America/Toronto',
+      'America/Vancouver',
+      'Europe/London',
+      'Europe/Paris',
+      'Europe/Berlin',
+      'Asia/Tokyo',
+      'Asia/Shanghai',
+      'Australia/Sydney'
+    )
+    .default('America/New_York')
+    .optional()
+    .messages({
+      'any.only': 'Timezone must be a valid timezone identifier',
+    }),
+});
