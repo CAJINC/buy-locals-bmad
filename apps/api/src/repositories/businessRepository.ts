@@ -44,7 +44,7 @@ export class BusinessRepository extends BaseRepository<Business> {
   }
 
   /**
-   * Search businesses with location-based filtering
+   * Search businesses with optimized PostGIS location-based filtering
    */
   async searchBusinesses(searchQuery: BusinessSearchQuery): Promise<{
     businesses: Business[];
@@ -53,44 +53,15 @@ export class BusinessRepository extends BaseRepository<Business> {
     const { lat, lng, radius = 25, category, search, page = 1, limit = 10 } = searchQuery;
     const offset = (page - 1) * limit;
 
+    // Use PostGIS if coordinates are provided, otherwise fall back to JSONB
+    if (lat && lng) {
+      return this.searchBusinessesPostGIS(searchQuery);
+    }
+
+    // Fallback to original JSONB-based search for non-location queries
     let whereConditions: string[] = ['is_active = true'];
     let params: any[] = [];
     let paramIndex = 1;
-
-    // Location-based search using distance calculation
-    let selectFields = '*';
-    let orderBy = 'created_at DESC';
-
-    if (lat && lng) {
-      // Calculate distance using Haversine formula
-      selectFields = `
-        *,
-        (6371 * acos(
-          cos(radians($${paramIndex})) * 
-          cos(radians((location->>'coordinates'->>'lat')::float)) * 
-          cos(radians((location->>'coordinates'->>'lng')::float) - radians($${paramIndex + 1})) + 
-          sin(radians($${paramIndex})) * 
-          sin(radians((location->>'coordinates'->>'lat')::float))
-        )) AS distance
-      `;
-      params.push(lat, lng);
-      paramIndex += 2;
-
-      // Filter by radius
-      whereConditions.push(`
-        (6371 * acos(
-          cos(radians($${paramIndex})) * 
-          cos(radians((location->>'coordinates'->>'lat')::float)) * 
-          cos(radians((location->>'coordinates'->>'lng')::float) - radians($${paramIndex + 1})) + 
-          sin(radians($${paramIndex})) * 
-          sin(radians((location->>'coordinates'->>'lat')::float))
-        )) <= $${paramIndex + 2}
-      `);
-      params.push(lat, lng, radius);
-      paramIndex += 3;
-
-      orderBy = 'distance ASC, created_at DESC';
-    }
 
     // Category filter
     if (category) {
@@ -110,10 +81,10 @@ export class BusinessRepository extends BaseRepository<Business> {
 
     // Main query for businesses
     const businessQuery = `
-      SELECT ${selectFields}
+      SELECT *
       FROM businesses 
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${orderBy}
+      ORDER BY created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     params.push(limit, offset);
@@ -135,6 +106,278 @@ export class BusinessRepository extends BaseRepository<Business> {
       businesses: businessResult.rows,
       totalCount: parseInt(countResult.rows[0].count),
     };
+  }
+
+  /**
+   * PostGIS-optimized business search with sub-1-second performance
+   */
+  private async searchBusinessesPostGIS(searchQuery: BusinessSearchQuery): Promise<{
+    businesses: Business[];
+    totalCount: number;
+  }> {
+    const startTime = process.hrtime.bigint();
+    const { lat, lng, radius = 25, category, search, page = 1, limit = 10 } = searchQuery;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Use the optimized PostGIS search function
+      const searchSql = `
+        SELECT * FROM search_businesses_by_location(
+          $1::FLOAT, $2::FLOAT, $3::FLOAT, $4::TEXT[], $5::TEXT, $6::INTEGER, $7::INTEGER
+        )
+      `;
+
+      const countSql = `
+        SELECT count_businesses_by_location(
+          $1::FLOAT, $2::FLOAT, $3::FLOAT, $4::TEXT[], $5::TEXT
+        ) as total_count
+      `;
+
+      const categoryArray = category ? [category] : null;
+      const searchParams = [
+        lat,
+        lng,
+        radius,
+        categoryArray,
+        search || null,
+        limit,
+        offset,
+      ];
+
+      const countParams = searchParams.slice(0, 5); // Remove limit and offset
+
+      // Execute queries in parallel for maximum performance
+      const [businessResult, countResult] = await Promise.all([
+        this.query(searchSql, searchParams),
+        this.query(countSql, countParams),
+      ]);
+
+      const endTime = process.hrtime.bigint();
+      const executionTimeMs = Number(endTime - startTime) / 1000000;
+
+      // Log performance metrics for monitoring
+      this.logQueryPerformance('searchBusinessesPostGIS', executionTimeMs, {
+        lat, lng, radius, category, search, resultsCount: businessResult.rows.length
+      });
+
+      // Alert if performance degrades
+      if (executionTimeMs > 200) {
+        console.warn('PostGIS query performance warning:', {
+          executionTimeMs,
+          query: searchQuery,
+          resultCount: businessResult.rows.length
+        });
+      }
+
+      return {
+        businesses: businessResult.rows.map(row => ({
+          ...row,
+          // Add distance to the business object for client use
+          distance: parseFloat(row.distance_km),
+        })),
+        totalCount: parseInt(countResult.rows[0].total_count),
+      };
+    } catch (error) {
+      const endTime = process.hrtime.bigint();
+      const executionTimeMs = Number(endTime - startTime) / 1000000;
+      
+      console.error('PostGIS query error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        executionTimeMs,
+        query: searchQuery
+      });
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Get businesses within a specific geometric area (polygon)
+   */
+  async getBusinessesInArea(polygon: { lat: number; lng: number }[]): Promise<Business[]> {
+    const startTime = process.hrtime.bigint();
+    
+    try {
+      // Convert polygon coordinates to PostGIS format
+      const polygonString = polygon
+        .map(point => `${point.lng} ${point.lat}`)
+        .join(', ');
+      
+      const query = `
+        SELECT *, 
+               ST_X(location_point) as longitude,
+               ST_Y(location_point) as latitude
+        FROM businesses
+        WHERE is_active = true
+          AND location_point IS NOT NULL
+          AND ST_Contains(
+            ST_GeomFromText('POLYGON((${polygonString}, ${polygon[0].lng} ${polygon[0].lat}))', 4326),
+            location_point
+          )
+        ORDER BY created_at DESC
+      `;
+
+      const result = await this.query(query, []);
+      
+      const endTime = process.hrtime.bigint();
+      const executionTimeMs = Number(endTime - startTime) / 1000000;
+      
+      this.logQueryPerformance('getBusinessesInArea', executionTimeMs, {
+        polygonPoints: polygon.length,
+        resultsCount: result.rows.length
+      });
+
+      return result.rows;
+    } catch (error) {
+      console.error('Get businesses in area error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get business density analysis for an area
+   */
+  async getBusinessDensityAnalysis(
+    centerLat: number, 
+    centerLng: number, 
+    radiusKm: number
+  ): Promise<{
+    totalBusinesses: number;
+    densityPerKm2: number;
+    categoryBreakdown: { category: string; count: number }[];
+    averageDistance: number;
+  }> {
+    const startTime = process.hrtime.bigint();
+    
+    try {
+      const query = `
+        WITH area_businesses AS (
+          SELECT 
+            categories,
+            ST_Distance(
+              ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+              location_point::geography
+            ) / 1000.0 AS distance_km
+          FROM businesses
+          WHERE is_active = true
+            AND location_point IS NOT NULL
+            AND ST_DWithin(
+              ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+              location_point::geography,
+              $3 * 1000
+            )
+        ),
+        category_counts AS (
+          SELECT unnest(categories) as category, COUNT(*) as count
+          FROM area_businesses
+          GROUP BY category
+          ORDER BY count DESC
+        )
+        SELECT 
+          (SELECT COUNT(*) FROM area_businesses) as total_businesses,
+          (SELECT ROUND(AVG(distance_km)::numeric, 2) FROM area_businesses) as avg_distance,
+          (SELECT json_agg(json_build_object('category', category, 'count', count)) 
+           FROM category_counts) as category_breakdown
+      `;
+
+      const result = await this.query(query, [centerLat, centerLng, radiusKm]);
+      const row = result.rows[0];
+      
+      const totalBusinesses = parseInt(row.total_businesses) || 0;
+      const areaKm2 = Math.PI * radiusKm * radiusKm;
+      const densityPerKm2 = totalBusinesses / areaKm2;
+
+      const endTime = process.hrtime.bigint();
+      const executionTimeMs = Number(endTime - startTime) / 1000000;
+      
+      this.logQueryPerformance('getBusinessDensityAnalysis', executionTimeMs, {
+        centerLat, centerLng, radiusKm, totalBusinesses
+      });
+
+      return {
+        totalBusinesses,
+        densityPerKm2: Math.round(densityPerKm2 * 100) / 100,
+        categoryBreakdown: row.category_breakdown || [],
+        averageDistance: parseFloat(row.avg_distance) || 0
+      };
+    } catch (error) {
+      console.error('Business density analysis error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find nearest businesses to a point
+   */
+  async findNearestBusinesses(
+    lat: number, 
+    lng: number, 
+    limit: number = 5,
+    category?: string
+  ): Promise<(Business & { distance: number })[]> {
+    const startTime = process.hrtime.bigint();
+    
+    try {
+      let categoryFilter = '';
+      const params: any[] = [lat, lng, limit];
+      
+      if (category) {
+        categoryFilter = 'AND $4 = ANY(categories)';
+        params.push(category);
+      }
+
+      const query = `
+        SELECT *,
+               ST_Distance(
+                 ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+                 location_point::geography
+               ) / 1000.0 AS distance_km
+        FROM businesses
+        WHERE is_active = true
+          AND location_point IS NOT NULL
+          ${categoryFilter}
+        ORDER BY location_point <-> ST_SetSRID(ST_MakePoint($2, $1), 4326)
+        LIMIT $3
+      `;
+
+      const result = await this.query(query, params);
+      
+      const endTime = process.hrtime.bigint();
+      const executionTimeMs = Number(endTime - startTime) / 1000000;
+      
+      this.logQueryPerformance('findNearestBusinesses', executionTimeMs, {
+        lat, lng, limit, category, resultsCount: result.rows.length
+      });
+
+      return result.rows.map(row => ({
+        ...row,
+        distance: parseFloat(row.distance_km)
+      }));
+    } catch (error) {
+      console.error('Find nearest businesses error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Log query performance for monitoring
+   */
+  private logQueryPerformance(queryType: string, executionTimeMs: number, metadata: any): void {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      queryType,
+      executionTimeMs: Math.round(executionTimeMs * 100) / 100,
+      metadata,
+      performanceLevel: executionTimeMs < 50 ? 'excellent' : 
+                       executionTimeMs < 200 ? 'good' : 
+                       executionTimeMs < 500 ? 'acceptable' : 'poor'
+    };
+
+    // In production, this would go to a proper logging service
+    console.log('Query Performance:', JSON.stringify(logEntry));
+    
+    // Could also send to metrics service like DataDog, New Relic, etc.
+    // metricsService.recordQueryPerformance(logEntry);
   }
 
   /**

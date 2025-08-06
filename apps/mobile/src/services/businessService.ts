@@ -248,6 +248,184 @@ class BusinessService {
       { method: 'DELETE' }
     );
   }
+
+  // Location-based business search
+  async searchBusinessesByLocation(searchQuery: {
+    lat: number;
+    lng: number;
+    radius?: number;
+    category?: string[];
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    isOpen?: boolean;
+  }): Promise<{
+    success: boolean;
+    data?: {
+      businesses: BusinessResponseDto[];
+      pagination: {
+        page: number;
+        limit: number;
+        totalCount: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrevious: boolean;
+      };
+      searchMetadata: {
+        searchRadius: number;
+        searchCenter: { lat: number; lng: number };
+        executionTimeMs: number;
+        cacheHit: boolean;
+        resultsWithinRadius: number;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const query = new URLSearchParams();
+      
+      // Required parameters
+      query.append('lat', searchQuery.lat.toString());
+      query.append('lng', searchQuery.lng.toString());
+      
+      // Optional parameters
+      if (searchQuery.radius) query.append('radius', searchQuery.radius.toString());
+      if (searchQuery.category?.length) query.append('category', searchQuery.category.join(','));
+      if (searchQuery.search) query.append('search', searchQuery.search);
+      if (searchQuery.page) query.append('page', searchQuery.page.toString());
+      if (searchQuery.limit) query.append('limit', searchQuery.limit.toString());
+      if (searchQuery.sortBy) query.append('sortBy', searchQuery.sortBy);
+      if (searchQuery.isOpen !== undefined) query.append('isOpen', searchQuery.isOpen.toString());
+
+      const response = await this.makeRequest<any>(`/businesses/search/location?${query}`);
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Location search error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Location search failed',
+      };
+    }
+  }
+
+  // Get categories available in specific location
+  async getCategoriesInLocation(lat: number, lng: number, radius: number = 25): Promise<{
+    success: boolean;
+    data?: {
+      categories: string[];
+      location: { lat: number; lng: number; radius: number };
+    };
+    error?: string;
+  }> {
+    try {
+      const query = new URLSearchParams({
+        lat: lat.toString(),
+        lng: lng.toString(),
+        radius: radius.toString(),
+      });
+
+      const response = await this.makeRequest<any>(`/businesses/search/location/categories?${query}`);
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Categories in location error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get categories',
+      };
+    }
+  }
+
+  // Get popular areas near location
+  async getPopularAreas(lat: number, lng: number, radius: number = 50): Promise<{
+    success: boolean;
+    data?: {
+      popularAreas: Array<{
+        center: { lat: number; lng: number };
+        businessCount: number;
+        averageRating: number;
+        topCategories: string[];
+        name?: string;
+      }>;
+      searchCenter: { lat: number; lng: number; radius: number };
+    };
+    error?: string;
+  }> {
+    try {
+      const query = new URLSearchParams({
+        lat: lat.toString(),
+        lng: lng.toString(),
+        radius: radius.toString(),
+      });
+
+      const response = await this.makeRequest<any>(`/businesses/search/location/popular-areas?${query}`);
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Popular areas error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get popular areas',
+      };
+    }
+  }
+
+  // Search businesses with traditional non-location filters
+  async searchBusinesses(searchQuery: {
+    search?: string;
+    category?: string[];
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+  }): Promise<{
+    success: boolean;
+    data?: {
+      businesses: BusinessResponseDto[];
+      pagination: {
+        page: number;
+        limit: number;
+        totalCount: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrevious: boolean;
+      };
+    };
+    error?: string;
+  }> {
+    try {
+      const query = new URLSearchParams();
+      
+      if (searchQuery.search) query.append('search', searchQuery.search);
+      if (searchQuery.category?.length) query.append('category', searchQuery.category.join(','));
+      if (searchQuery.page) query.append('page', searchQuery.page.toString());
+      if (searchQuery.limit) query.append('limit', searchQuery.limit.toString());
+      if (searchQuery.sortBy) query.append('sortBy', searchQuery.sortBy);
+
+      const response = await this.makeRequest<any>(`/businesses/search?${query}`);
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Business search error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Business search failed',
+      };
+    }
+  }
 }
 
 export const businessService = new BusinessService();

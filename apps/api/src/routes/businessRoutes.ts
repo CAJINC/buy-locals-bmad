@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { BusinessService } from '../services/businessService.js';
 import { validateBody, validateQuery } from '../middleware/validation.js';
 import { authMiddleware, requireRole, requireBusinessOwner } from '../middleware/auth.js';
+import { performanceMonitoring } from '../middleware/performanceMonitoring.js';
+import { locationSecurityMiddleware } from '../middleware/locationSecurity.js';
 import {
   createBusinessSchema,
   updateBusinessSchema,
@@ -10,10 +12,14 @@ import {
   businessMediaUploadSchema
 } from '../schemas/businessSchemas.js';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/responseUtils.js';
+import { handler as locationSearchHandler, getCategoriesInLocation, getPopularAreas } from '../functions/business/locationSearch.js';
 import { Request, Response, NextFunction } from 'express';
 
 const router = Router();
 const businessService = new BusinessService();
+
+// Apply performance monitoring to all routes
+router.use(performanceMonitoring);
 
 /**
  * POST /api/businesses
@@ -39,8 +45,99 @@ router.post('/',
 );
 
 /**
+ * GET /api/businesses/search/location
+ * Location-based business search with sub-1-second performance
+ */
+router.get('/search/location',
+  locationSecurityMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Convert Express request to Lambda-compatible event for handler
+      const event = {
+        queryStringParameters: req.query as { [key: string]: string },
+        headers: req.headers,
+        requestContext: { requestId: 'express-' + Date.now() },
+      } as any;
+
+      const result = await locationSearchHandler(event, {} as any, {} as any);
+      
+      if (result.statusCode === 200) {
+        const body = JSON.parse(result.body);
+        res.set(result.headers || {});
+        return res.status(200).json(body);
+      } else {
+        const errorBody = JSON.parse(result.body);
+        return res.status(result.statusCode).json(errorBody);
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/businesses/search/location/categories
+ * Get categories available in a specific location
+ */
+router.get('/search/location/categories',
+  locationSecurityMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const event = {
+        queryStringParameters: req.query as { [key: string]: string },
+        headers: req.headers,
+        requestContext: { requestId: 'express-' + Date.now() },
+      } as any;
+
+      const result = await getCategoriesInLocation(event, {} as any, {} as any);
+      
+      if (result.statusCode === 200) {
+        const body = JSON.parse(result.body);
+        res.set(result.headers || {});
+        return res.status(200).json(body);
+      } else {
+        const errorBody = JSON.parse(result.body);
+        return res.status(result.statusCode).json(errorBody);
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/businesses/search/location/popular-areas
+ * Get popular business areas near a location
+ */
+router.get('/search/location/popular-areas',
+  locationSecurityMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const event = {
+        queryStringParameters: req.query as { [key: string]: string },
+        headers: req.headers,
+        requestContext: { requestId: 'express-' + Date.now() },
+      } as any;
+
+      const result = await getPopularAreas(event, {} as any, {} as any);
+      
+      if (result.statusCode === 200) {
+        const body = JSON.parse(result.body);
+        res.set(result.headers || {});
+        return res.status(200).json(body);
+      } else {
+        const errorBody = JSON.parse(result.body);
+        return res.status(result.statusCode).json(errorBody);
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/businesses
- * Search businesses with location-based filtering and pagination
+ * Search businesses with traditional filtering and pagination (fallback)
  */
 router.get('/',
   validateQuery(businessSearchSchema),
