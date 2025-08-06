@@ -30,14 +30,15 @@ export const getAvailabilitySettings: APIGatewayProxyHandler = async (event) => 
 
     return responseUtils.success(settings || {});
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error retrieving availability settings', error);
 
-    if (error.message === 'Business not found') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Business not found') {
       return responseUtils.notFound('Business not found');
     }
 
-    if (error.message === 'Unauthorized to access this business') {
+    if (errorMessage === 'Unauthorized to access this business') {
       return responseUtils.forbidden('Unauthorized to access this business');
     }
 
@@ -84,19 +85,20 @@ export const updateAvailabilitySettings: APIGatewayProxyHandler = async (event) 
 
     return responseUtils.success(settings, 'Availability settings updated successfully');
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error updating availability settings', error);
 
-    if (error.message === 'Business not found') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Business not found') {
       return responseUtils.notFound('Business not found');
     }
 
-    if (error.message === 'Unauthorized to modify this business') {
+    if (errorMessage === 'Unauthorized to modify this business') {
       return responseUtils.forbidden('Unauthorized to modify this business');
     }
 
-    if (error.message.includes('Invalid time format')) {
-      return responseUtils.badRequest(error.message);
+    if (errorMessage.includes('Invalid time format')) {
+      return responseUtils.badRequest(errorMessage);
     }
 
     return responseUtils.internalServerError('Failed to update availability settings');

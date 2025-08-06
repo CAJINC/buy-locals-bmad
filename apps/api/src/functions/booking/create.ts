@@ -43,18 +43,19 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       message: 'Booking created successfully'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error creating booking', error);
 
-    if (error.message === 'Time slot no longer available') {
-      return responseUtils.badRequest(error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Time slot no longer available') {
+      return responseUtils.badRequest(errorMessage);
     }
 
-    if (error.message === 'Business not found') {
+    if (errorMessage === 'Business not found') {
       return responseUtils.notFound('Business not found');
     }
 
-    if (error.message === 'Service not available') {
+    if (errorMessage === 'Service not available') {
       return responseUtils.badRequest('Service not available');
     }
 

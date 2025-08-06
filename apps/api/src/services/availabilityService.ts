@@ -22,7 +22,7 @@ export interface CheckAvailabilityOptions {
   businessId: string;
   startTime: Date;
   duration: number;
-  transaction?: any;
+  transaction?: unknown;
 }
 
 export interface ReserveTimeSlotOptions {
@@ -48,7 +48,7 @@ class AvailabilityService {
       const cachedSlots = await redis.get(cacheKey);
       if (cachedSlots) {
         logger.debug('Availability retrieved from cache', { businessId, date });
-        return JSON.parse(cachedSlots).map((slot: any) => ({
+        return JSON.parse(cachedSlots).map((slot: Record<string, unknown>) => ({
           ...slot,
           startTime: new Date(slot.startTime),
           endTime: new Date(slot.endTime)
@@ -146,7 +146,7 @@ class AvailabilityService {
     let servicePrice: number | undefined;
 
     if (serviceId && business.services) {
-      const service = business.services.find((s: any) => s.id === serviceId);
+      const service = business.services.find((s: Record<string, unknown>) => s.id === serviceId);
       if (service) {
         serviceDuration = service.duration || serviceDuration;
         bufferTime = service.bufferTime || bufferTime;
@@ -171,7 +171,7 @@ class AvailabilityService {
         endTime,
         isAvailable: true, // We'll check this against existing bookings
         price: servicePrice,
-        serviceId: serviceId
+        serviceId
       });
     }
 

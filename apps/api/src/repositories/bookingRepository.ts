@@ -27,7 +27,7 @@ export interface FindUserBookingsOptions {
 class BookingRepository extends BaseRepository {
   private readonly table = 'bookings';
 
-  async create(data: CreateBookingData, transaction?: any): Promise<Booking> {
+  async create(data: CreateBookingData, transaction?: unknown): Promise<Booking> {
     const db = transaction || this.db;
     
     try {
@@ -54,7 +54,7 @@ class BookingRepository extends BaseRepository {
     }
   }
 
-  async findById(id: string, transaction?: any): Promise<Booking | null> {
+  async findById(id: string, transaction?: unknown): Promise<Booking | null> {
     const db = transaction || this.db;
     
     try {
@@ -69,7 +69,7 @@ class BookingRepository extends BaseRepository {
     }
   }
 
-  async findByIdForUpdate(id: string, transaction: any): Promise<Booking | null> {
+  async findByIdForUpdate(id: string, transaction: unknown): Promise<Booking | null> {
     try {
       const booking = await transaction(this.table)
         .where('id', id)
@@ -83,11 +83,11 @@ class BookingRepository extends BaseRepository {
     }
   }
 
-  async update(id: string, data: UpdateBookingData, transaction?: any): Promise<Booking> {
+  async update(id: string, data: UpdateBookingData, transaction?: unknown): Promise<Booking> {
     const db = transaction || this.db;
     
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         updated_at: data.updatedAt
       };
 
@@ -114,7 +114,7 @@ class BookingRepository extends BaseRepository {
 
   async findConflictingBookings(
     options: FindConflictingBookingsOptions,
-    transaction?: any
+    transaction?: unknown
   ): Promise<Booking[]> {
     const { businessId, startTime, duration, excludeStatuses = [], excludeBookingId } = options;
     const db = transaction || this.db;
@@ -278,7 +278,7 @@ class BookingRepository extends BaseRepository {
     }
   }
 
-  private mapToBooking(row: any): Booking {
+  private mapToBooking(row: Record<string, unknown>): Booking {
     return {
       id: row.id,
       consumerId: row.consumer_id,

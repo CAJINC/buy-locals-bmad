@@ -61,14 +61,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       availability
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error retrieving availability', error);
 
-    if (error.message === 'Business not found') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Business not found') {
       return responseUtils.notFound('Business not found');
     }
 
-    if (error.message === 'Service not found') {
+    if (errorMessage === 'Service not found') {
       return responseUtils.notFound('Service not found');
     }
 

@@ -469,13 +469,13 @@ export enum LocationSearchErrorType {
 export class LocationSearchError extends Error {
   public type: LocationSearchErrorType;
   public statusCode: number;
-  public metadata?: any;
+  public metadata?: Record<string, unknown>;
 
   constructor(
     type: LocationSearchErrorType,
     message: string,
     statusCode: number = 400,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'LocationSearchError';

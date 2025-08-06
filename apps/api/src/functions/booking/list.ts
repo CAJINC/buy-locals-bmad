@@ -56,7 +56,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error retrieving bookings', error);
     return responseUtils.internalServerError('Failed to retrieve bookings');
   }

@@ -3,7 +3,7 @@ import { businessRepository } from '../repositories/businessRepository';
 import { availabilityService } from './availabilityService';
 import { notificationService } from './notificationService';
 import { logger } from '../utils/logger';
-import type { Booking, CreateBookingInput, CancelBookingInput, GetBookingsOptions } from '../types/Booking';
+import type { Booking, CancelBookingInput, CreateBookingInput, GetBookingsOptions } from '../types/Booking';
 
 class BookingService {
   async createBooking(input: CreateBookingInput): Promise<Booking> {
@@ -44,7 +44,7 @@ class BookingService {
 
       // Validate service exists for the business
       if (serviceId && business.services) {
-        const service = business.services.find((s: any) => s.id === serviceId);
+        const service = business.services.find((s: Record<string, unknown>) => s.id === serviceId);
         if (!service) {
           throw new Error('Service not available');
         }

@@ -20,22 +20,22 @@ describe('Booking Create Handler', () => {
     mockResponseUtils.badRequest.mockReturnValue({
       statusCode: 400,
       body: JSON.stringify({ error: 'Bad Request' })
-    } as any);
+    } as unknown);
     
     mockResponseUtils.unauthorized.mockReturnValue({
       statusCode: 401,
       body: JSON.stringify({ error: 'Unauthorized' })
-    } as any);
+    } as unknown);
     
     mockResponseUtils.created.mockReturnValue({
       statusCode: 201,
       body: JSON.stringify({ message: 'Created' })
-    } as any);
+    } as unknown);
     
     mockResponseUtils.internalServerError.mockReturnValue({
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal Server Error' })
-    } as any);
+    } as unknown);
   });
 
   it('should create booking successfully with valid data', async () => {
@@ -67,12 +67,12 @@ describe('Booking Create Handler', () => {
       body: JSON.stringify(validBookingData),
       requestContext: {
         authorizer: { principalId: 'user-123' }
-      } as any
+      } as unknown
     };
 
     mockBookingService.createBooking.mockResolvedValue(mockBooking);
 
-    const result = await handler(mockEvent as APIGatewayProxyEvent, mockContext, jest.fn());
+    await handler(mockEvent as APIGatewayProxyEvent, mockContext, jest.fn());
 
     expect(mockBookingService.createBooking).toHaveBeenCalledWith({
       ...validBookingData,
@@ -90,7 +90,7 @@ describe('Booking Create Handler', () => {
       body: null,
       requestContext: {
         authorizer: { principalId: 'user-123' }
-      } as any
+      } as unknown
     };
 
     await handler(mockEvent as APIGatewayProxyEvent, mockContext, jest.fn());
@@ -103,7 +103,7 @@ describe('Booking Create Handler', () => {
       body: JSON.stringify({}),
       requestContext: {
         authorizer: null
-      } as any
+      } as unknown
     };
 
     await handler(mockEvent as APIGatewayProxyEvent, mockContext, jest.fn());
@@ -121,7 +121,7 @@ describe('Booking Create Handler', () => {
       body: JSON.stringify(invalidBookingData),
       requestContext: {
         authorizer: { principalId: 'user-123' }
-      } as any
+      } as unknown
     };
 
     await handler(mockEvent as APIGatewayProxyEvent, mockContext, jest.fn());
@@ -149,7 +149,7 @@ describe('Booking Create Handler', () => {
       body: JSON.stringify(validBookingData),
       requestContext: {
         authorizer: { principalId: 'user-123' }
-      } as any
+      } as unknown
     };
 
     mockBookingService.createBooking.mockRejectedValue(
@@ -179,7 +179,7 @@ describe('Booking Create Handler', () => {
       body: JSON.stringify(validBookingData),
       requestContext: {
         authorizer: { principalId: 'user-123' }
-      } as any
+      } as unknown
     };
 
     mockBookingService.createBooking.mockRejectedValue(
@@ -189,7 +189,7 @@ describe('Booking Create Handler', () => {
     mockResponseUtils.notFound.mockReturnValue({
       statusCode: 404,
       body: JSON.stringify({ error: 'Business not found' })
-    } as any);
+    } as unknown);
 
     await handler(mockEvent as APIGatewayProxyEvent, mockContext, jest.fn());
 

@@ -46,23 +46,24 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       message: result.message
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error cancelling booking', error);
 
-    if (error.message === 'Booking not found') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Booking not found') {
       return responseUtils.notFound('Booking not found');
     }
 
-    if (error.message === 'Unauthorized to cancel this booking') {
+    if (errorMessage === 'Unauthorized to cancel this booking') {
       return responseUtils.forbidden('You are not authorized to cancel this booking');
     }
 
-    if (error.message === 'Booking cannot be cancelled') {
+    if (errorMessage === 'Booking cannot be cancelled') {
       return responseUtils.badRequest('This booking cannot be cancelled (already completed or cancelled)');
     }
 
-    if (error.message.includes('Cancellation notice period')) {
-      return responseUtils.badRequest(error.message);
+    if (errorMessage.includes('Cancellation notice period')) {
+      return responseUtils.badRequest(errorMessage);
     }
 
     return responseUtils.internalServerError('Failed to cancel booking');
